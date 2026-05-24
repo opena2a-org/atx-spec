@@ -73,11 +73,11 @@ Threshold signing means that no single HSM holds the full signing capability. Th
 Every ATX issued by a sovereign node carries an issuerDid that resolves to the sovereign's authority DID document. Example:
 
 ```
-did:atp:authority:gov.uk
-did:atp:authority:state.gov.us
-did:atp:authority:digital.govt.nz
-did:atp:authority:bsi.de
-did:atp:authority:digital.go.jp
+did:opena2a:authority:gov.uk
+did:opena2a:authority:state.gov.us
+did:opena2a:authority:digital.govt.nz
+did:opena2a:authority:bsi.de
+did:opena2a:authority:digital.go.jp
 ```
 
 These DIDs are not under OpenA2A's control. Each sovereign publishes its own DID document at a sovereign controlled URL. The sovereign's keys, rotation policy, and revocation history are all sovereign published.
@@ -106,15 +106,15 @@ The trust list is not a global registry. Each sovereign maintains its own. Two s
 
 ```
 gov.uk trust list:
-  did:atp:authority:opena2a.org        Allowed   (root, for community packages)
-  did:atp:authority:gov.us             Allowed   (allied nation)
-  did:atp:authority:europa.eu          Allowed   (regional bloc)
-  did:atp:authority:digital.govt.nz    Allowed
-  did:atp:authority:bsi.de             Allowed
-  did:atp:authority:digital.go.jp      Allowed
-  did:atp:authority:gc.ca              Allowed
-  did:atp:authority:adversary.example  Denied
-  did:atp:authority:enterprise.acme    Conditional (max trust level 2)
+  did:opena2a:authority:opena2a.org        Allowed   (root, for community packages)
+  did:opena2a:authority:gov.us             Allowed   (allied nation)
+  did:opena2a:authority:europa.eu          Allowed   (regional bloc)
+  did:opena2a:authority:digital.govt.nz    Allowed
+  did:opena2a:authority:bsi.de             Allowed
+  did:opena2a:authority:digital.go.jp      Allowed
+  did:opena2a:authority:gc.ca              Allowed
+  did:opena2a:authority:adversary.example  Denied
+  did:opena2a:authority:enterprise.acme    Conditional (max trust level 2)
 ```
 
 A UK verifier checking an ATX issued by gov.us looks up gov.us in the local trust list. Allowed. Cosignature path established. Verification proceeds.
@@ -159,7 +159,7 @@ Two recognized sovereigns:
 
 1. Agent A in jurisdiction X holds an ATX issued by gov.x.
 2. Agent A calls a service in jurisdiction Y.
-3. Verifier in Y looks up did:atp:authority:gov.x in Y's trust list. Allowed.
+3. Verifier in Y looks up did:opena2a:authority:gov.x in Y's trust list. Allowed.
 4. Verifier in Y has gov.x's public key cached. Signature verifies.
 5. ATX accepted at its specified trust level (potentially capped per Y's policy).
 
@@ -172,7 +172,7 @@ Two sovereigns with no direct bilateral but both recognizing the root:
 1. Agent A in jurisdiction X holds an ATX issued by gov.x.
 2. Agent A calls a service in jurisdiction Y.
 3. Verifier in Y looks up gov.x. Not on local trust list.
-4. Verifier requests a cosignature from the root authority (did:atp:authority:opena2a.org).
+4. Verifier requests a cosignature from the root authority (did:opena2a:authority:opena2a.org).
 5. Root verifies the gov.x signature, checks that gov.x is on the root's trust list, issues a cosignature.
 6. Cosigned ATX has issuerChain = [gov.x, opena2a.org]. Verifier in Y accepts the credential because Y trusts the root.
 

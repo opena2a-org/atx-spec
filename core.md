@@ -43,9 +43,9 @@ The ATX travels with the agent. When agent A calls agent B, A presents its ATX i
 {
   "atxVersion":       "1.0",
   "agentId":          "aim_7f3a9c2e",
-  "agentDid":         "did:atp:agent:acme-corp/billing-agent",
+  "agentDid":         "did:opena2a:agent:acme-corp/billing-agent",
   "publisher":        "acme-corp",
-  "publisherDid":     "did:atp:publisher:acme-corp",
+  "publisherDid":     "did:opena2a:publisher:acme-corp",
   "version":          "2.1.4",
   "contentHash":      "sha256:abc123...",
   "buildAttestation": "sha256:def456...",
@@ -67,10 +67,10 @@ The ATX travels with the agent. When agent A calls agent B, A presents its ATX i
   "trustLevel":   3,
   "issuedAt":     "2026-05-19T00:00:00Z",
   "expiresAt":    "2026-05-26T00:00:00Z",
-  "issuerDid":    "did:atp:authority:opena2a.org",
+  "issuerDid":    "did:opena2a:authority:opena2a.org",
   "issuerChain": [
-    "did:atp:authority:opena2a.org",
-    "did:atp:authority:google.com"
+    "did:opena2a:authority:opena2a.org",
+    "did:opena2a:authority:google.com"
   ],
   "signatures": [
     { "keyId": "opena2a.org#key-v3", "algorithm": "Ed25519",   "value": "..." },
@@ -128,7 +128,7 @@ ATX is the artifact. ATP is the protocol that issues, verifies, revokes, and fed
 ATP defines five things:
 
 1. **The ATX format itself.** Schema, signature suite, encoding rules. Published as an open standard.
-2. **The DID method `did:atp`.** How publishers, agents, and authorities are named. How keys are bound to identities. How key rotation works without breaking existing credentials.
+2. **The DID method `did:opena2a`.** How publishers, agents, and authorities are named. How keys are bound to identities. How key rotation works without breaking existing credentials. Type prefixes registered: `agent`, `authority`, `publisher`, `mcp_server`, `a2a_agent`, `skill`, `ai_tool`, `llm`. Shared with AIP (Agent Identity Protocol) and ATP-SPEC v1.0.0-rc1.
 3. **The transparency log format.** RFC 6962 binary Merkle tree. Signed Tree Head schema. Inclusion and consistency proof formats.
 4. **The federation protocol.** How nodes register with each other, exchange public keys, cosign credentials, propagate revocations, and maintain trust lists.
 5. **The revocation list format.** Delta CRLs, signed CRL endpoints, push notification format, cache semantics.
@@ -279,7 +279,7 @@ Published every 5 minutes maximum. Any gap greater than 10 minutes is a monitor 
   "treeSize":  1847294,
   "timestamp": "2026-05-19T14:00:00Z",
   "rootHash":  "sha256:789abc...",
-  "logId":     "did:atp:authority:opena2a.org",
+  "logId":     "did:opena2a:authority:opena2a.org",
   "signatures": [
     { "keyId": "opena2a.org#key-v3", "algorithm": "Ed25519",   "value": "..." },
     { "keyId": "opena2a.org#pqc-v1", "algorithm": "ML-DSA-65", "value": "..." }
@@ -357,7 +357,7 @@ This is the architectural property that makes ATX scale to a billion agents. It 
 
 These boundaries are as important as the capabilities.
 
-* **ATX is not an identity system.** AIM is. ATX binds an agent identity to a build and a behavioral profile. The identity itself comes from AIM.
+* **ATX is not an identity system.** AIM is, and AIM implements AIP §3 Agent Identity (see [`opena2a-org/agent-identity-protocol`](https://github.com/opena2a-org/agent-identity-protocol)). ATX binds an AIM-issued, AIP-conformant identity to a build and a behavioral profile. The identity itself comes from AIM.
 * **ATX is not a runtime authorization system.** ARC is. ATX presents the credential. ARC enforces the policy.
 * **ATX is not a centralized database.** It is a credential format. The issuing nodes are infrastructure. The credential travels with the agent.
 * **ATX is not proprietary.** ATP is published as an open standard. Any organization can issue ATX credentials using the same format. Compatibility is the goal.
