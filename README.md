@@ -18,6 +18,12 @@ Architecture specifications, v1.0 (May 2026). Reference implementation tracked i
 
 ATX/ATP/AIP cross-reference: see [`opena2a-org/agent-trust-protocol`](https://github.com/opena2a-org/agent-trust-protocol) for the ATP wire protocol spec and [`opena2a-org/agent-identity-protocol`](https://github.com/opena2a-org/agent-identity-protocol) for the AIP identity spec.
 
+## Conformance
+
+Byte-stable conformance fixtures and SDK-independent reference verifiers for ATX v1.0 live at [`opena2a-org/atx-conformance`](https://github.com/opena2a-org/atx-conformance). The suite ships eight fixtures (baseline valid, hybrid Ed25519 plus ML-DSA-65, threshold 2-of-3 cosignature, revoked, expired, wrong-issuer, tampered-signature, malformed-schema), each pinned by SHA-256 in `MANIFEST.sha256`, plus two reference verifiers: Go (full hybrid via Cloudflare CIRCL) and Python (Ed25519 only; post-quantum verification out of scope for the Python stdlib stack). Both verifiers report 8 of 8 PASS against the shipped fixture set.
+
+Second-party implementations of ATX issuance or verification are tracked on [a2aproject/A2A#1876](https://github.com/a2aproject/A2A/issues/1876).
+
 ## License
 
 Apache 2.0. See [LICENSE](LICENSE).
