@@ -37,7 +37,7 @@ All three use the unified DID method `did:opena2a:<type>:<id>` where `<type>` is
 | v1.0 attestation envelope | ATX schema (`scanSummary`, `behavioralProfile`, `signatures`) | Direct shape match. |
 | v1.1 vouching attestations (this PR) | AIP §6 Trust Scoring | Adjacent. AIP §6 defines the interface (factor set, weights, composite rule). The AIM `TrustCalculator` is the named reference number. |
 | v1.2 federated revocation log | ATP §5 Transparency Log plus ATP §6 Federation | RFC 6962 Merkle tree. Architecturally aligned with the design A2A-IDF v1.2 sketches. |
-| v2.0 PQC algorithm agility | ATX hybrid Ed25519 plus ML-DSA-65 at v1 | ATX spec mandates hybrid at v1. Reference implementation issues Ed25519-only today; hybrid issuance call-site flip is imminent. The spec mandate and the reference-implementation status are two distinct statements; both are accurate as written. |
+| v2.0 PQC algorithm agility | ATX hybrid Ed25519 plus ML-DSA-65 at v1 | ATX spec mandates hybrid at v1. Reference implementation issues hybrid Ed25519 plus ML-DSA-65 credentials in production today on the registry path (per `opena2a-registry` PR `#215` for the issuer wire format and PR `#214` for the offline verifier). |
 
 ### What this set does that APS, CTEF, and Envoys do not
 
@@ -62,7 +62,7 @@ AIP-SPEC Appendix A.1 names this explicitly. The summary:
 | AIP / ATP / ATX section | AIM and Registry status | Notes |
 |---|---|---|
 | AIP §3 Identity (Ed25519, agent ID, DID) | Shipped | Server-side keygen, registered Ed25519 public key. |
-| AIP §3 Hybrid Ed25519 plus ML-DSA-65 signing | Spec mandate at v1; partial in implementation | Full hybrid signing stack (CIRCL `mldsa65`, hybrid wrapper, verifier hybrid path) is implemented and tested. The issuance call site does not yet invoke `HybridSign()`; issued credentials are Ed25519-only today. Call-site flip is imminent. |
+| AIP §3 Hybrid Ed25519 plus ML-DSA-65 signing | Shipped end to end on the registry path | Registry-side `ATCService.IssueATC()` emits hybrid signatures in production (threshold Ed25519 plus one ML-DSA-65 signature). The ML-DSA-65 signature `Value` is the raw 3309-byte `mldsa65.SignatureSize` blob as of opena2a-registry PR `#215`. The standalone offline-verify package `opena2a-registry/pkg/atcverify` enforces the hybrid signing mandate as of PR `#214`. A parallel AIM-side CBOR issuer (`RealATCIssuer`) signs Ed25519 only and has no active production callers today. |
 | AIP §4 Capabilities and FGA enforcement | Shipped | 5-step blocking FGA engine (capability, attribute, context, chain, intent). |
 | AIP §4 JIT capability grants with TTL | Partial | TTL today is for PAM (Privileged Access Management) emergency-escalation only. Routine capability grants are static. |
 | AIP §5 Verification (challenge-response) | Shipped | `/authorize` endpoint exists. Direct SDK callers are pending. |
@@ -73,7 +73,7 @@ AIP-SPEC Appendix A.1 names this explicitly. The summary:
 | ATX §1.2 lifecycle (build-plugin issuance) | Plugin not yet shipped as code | Specified in ATX core §3.1; reference implementation pending. |
 | ATP §5 Transparency Log (RFC 6962) | Shipped (binary Merkle tree, signed tree heads, consistency proofs) | Endpoint serving live signed tree heads and consistency proofs is in the registry. |
 | ATP §6 Federation | Single-authority today | Federation routes and bilateral cosignature flow exist. Multi-authority operating consensus is the next federation milestone. |
-| Local offline verification | Go-only | Standalone Go verifier package exists. TypeScript, Python, and Java SDKs do not yet ship a local-verify library. |
+| Local offline verification | Go in the SDK layer; Go plus Python in the conformance suite | Standalone offline-verify package exists at the registry's `pkg/atcverify` (Go, full Ed25519 plus ML-DSA-65 hybrid). The `opena2a-standards/atx-conformance` suite ships an additional SDK-independent Python reference verifier (Ed25519 only; ML-DSA-65 verification out of scope for the Python stdlib stack) and a Go reference verifier with full hybrid coverage. TypeScript and Java SDKs do not yet ship a local-verify library. |
 
 ### Where this set does not yet meet the (a)(b)(c) bar this Coordination Map applies
 
