@@ -81,6 +81,8 @@ The ATX travels with the agent. When agent A calls agent B, A presents its ATX i
 
 Every field is mandatory unless explicitly marked optional in the ATP spec. The signature block carries at minimum one Ed25519 signature and one ML-DSA-65 signature. Quantum resistance is not deferred. It ships on day one.
 
+The version field is named `atcVersion` on the wire (the `atxVersion` shown in the illustration above is a documentation alias for the same field). Its value selects the canonical form the signatures cover: see §1.3a. `"1.0"` is the legacy eleven-field form; `"1.1"` signs the JCS (RFC 8785) canonicalization of a projected to-be-signed object, which brings `capabilities`, `scanSummary`, `issuerChain`, and `publisher` under the signature.
+
 ### 1.2 ATX lifecycle
 
 | Stage | Trigger | What happens |
@@ -106,6 +108,118 @@ Any party verifying an ATX runs this sequence locally. Steps 1 through 5 require
 8. Accept. Attach ATX to request context for downstream use.
 
 Total verification time on warm cache is under 2 milliseconds. Cold cache is under 10 milliseconds. The Registry is never on this path.
+
+In step 1 the verifier dispatches on the credential's version field (`atcVersion`
+on the wire): `"1.0"` selects the legacy canonical form of §1.3a.1; `"1.1"`
+selects the JCS canonical form of §1.3a.2. Steps 4 and 5 verify the signature
+over the bytes that form produces.
+
+### 1.3a Canonical signing form
+
+The signature in `signatures[]` does not cover the raw JSON body. It covers a
+deterministic byte string derived from the credential. Two forms exist. A
+verifier selects the form by the credential's version field; the two are never
+mixed.
+
+#### 1.3a.1 Legacy form (`atcVersion` = "1.0")
+
+ATX v1.0 signs a pipe-delimited string of exactly eleven fields, in this order:
+
+```
+agentId | agentDid | version | contentHash | buildAttestation | issuerDid |
+trustLevel | trustScore (formatted %.6f) | issuedAt (RFC 3339, UTC) |
+expiresAt (RFC 3339, UTC) | "1.0"
+```
+
+The eleventh field is the literal string `1.0`, independent of any other field.
+This form is **frozen**: existing v1.0 signatures depend on its exact bytes, so
+it MUST NOT change. It signs neither `capabilities`, nor `scanSummary`, nor
+`behavioralProfile`, nor `publisher`, nor `publisherDid`, nor `issuerChain`, nor
+`transparencyLogIndex`. A holder of a valid v1.0 credential can therefore alter
+any of those fields and the signature still verifies. Consumers MUST treat those
+fields as unauthenticated when `atcVersion` is `1.0` (see §1.3a.4).
+
+#### 1.3a.2 JCS form (`atcVersion` = "1.1")
+
+ATX v1.1 signs `JCS(TBS)`: the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785)
+JSON Canonicalization of a to-be-signed (TBS) object projected from the
+credential. This brings `capabilities`, `scanSummary`, `issuerChain`,
+`publisher`, and every field added in future versions under the signature
+automatically.
+
+The TBS is an **explicit projection**. An implementation MUST construct it by
+setting every key below to a fully determined value; it MUST NOT rely on a
+serializer's omit-empty behavior, because an omitted key and a present empty key
+canonicalize to different bytes. The included keys are exactly:
+
+```
+atcVersion, agentId, agentDid, publisher, publisherDid, version, contentHash,
+buildAttestation, capabilities, behavioralProfile, scanSummary, trustScore,
+trustLevel, issuedAt, expiresAt, issuerDid, issuerChain
+```
+
+Excluded, and MUST NOT appear in the TBS: `id`; `transparencyLogIndex` (a dead
+field, never populated); `signatures` (the envelope being produced); `revoked`,
+`revokedAt`, `revocationReason` (mutated after issuance via the CRL and the
+database, so they cannot be signed at issuance); and `createdAt`.
+
+Determinism rules. These are normative; they are the difference between a
+credential that verifies across implementations and one that does not:
+
+1. **Canonical empties are always present.** An absent optional string
+   (`publisherDid`, `buildAttestation`) MUST be the empty string `""`. An absent
+   `behavioralProfile` MUST be JSON `null`. An absent `capabilities` or
+   `issuerChain` MUST be the empty array `[]`, never `null`.
+2. **`scanSummary` is always a full object.** All six members
+   (`hma`, `criticalFindings`, `highFindings`, `secretless`, `cryptoServe`,
+   `oasbLevel`) MUST be present, zero-valued where unknown (`""` for the string
+   members, `0` for the integer members). `scanSummary` MUST NOT be `null`.
+3. **`trustScore` is string-encoded.** In the TBS, `trustScore` MUST be the
+   string produced by formatting the numeric score with six fractional digits
+   (printf `%.6f`), e.g. `"87.500000"`. The wire credential keeps `trustScore`
+   as a JSON number; the projection performs the conversion. This makes
+   `trustLevel` (an integer) the only JSON number in the TBS, which removes the
+   RFC 8785 ECMAScript number-formatting path from cross-language scope entirely.
+4. **`issuerChain` is root-first and order-significant.** Element 0 is the root
+   authority. JCS preserves array order and never sorts arrays, so reordering the
+   chain changes the signed bytes.
+
+The Ed25519 threshold signatures and the ML-DSA-65 hybrid signature are all
+computed over the **same** `JCS(TBS)` bytes. JCS itself sorts object member names
+by UTF-16 code unit, preserves array order, applies minimal JSON string escaping
+(only `"`, `\`, and the control range below U+0020 are escaped; every other code
+point, including all non-ASCII, is emitted as raw UTF-8), and emits no
+insignificant whitespace.
+
+#### 1.3a.3 Cross-implementation byte agreement is mandatory
+
+Because issuance (Go), the offline verifier (Go), the conformance verifiers
+(Go and Python), and the Secretless broker (TypeScript) each canonicalize
+independently, a v1.1 credential is only interoperable if all of them produce
+identical `JCS(TBS)` bytes. The normative byte vectors and the cross-language
+agreement gate live in
+[`atx-conformance/jcs-vectors`](https://github.com/opena2a-org/atx-conformance/tree/main/jcs-vectors).
+A conformant implementation MUST reproduce, byte-for-byte, the
+`expected.canonicalHex` of every vector there.
+
+#### 1.3a.4 Authorization on signed fields requires v1.1
+
+A consumer that makes an authorization or trust decision on `capabilities`,
+`scanSummary`, `issuerChain`, or `publisher` MUST require `atcVersion` to be
+`1.1` or later. Under `1.0` those fields are not covered by the signature
+(§1.3a.1) and a credential holder can forge them. This binds the Secretless AAP
+grant path, which gates on the verified `capabilities`: once issuance is v1.1, a
+forged `capabilities` value changes `JCS(TBS)` and fails signature verification,
+so the grant policy never sees it.
+
+#### 1.3a.5 Version transition
+
+When issuance moves from `1.0` to `1.1`, verifiers MUST accept both forms for one
+credential TTL (seven days), after which all live credentials are v1.1 and
+verifiers MAY reject `1.0` for capability-gated decisions per §1.3a.4. The
+`atcVersion` value is itself inside the v1.1 TBS, so an attacker cannot strip a
+`1.1` credential down to the `1.0` form: the legacy verifier would recompute a
+pipe string the v1.1 signature never covered, and verification fails closed.
 
 ### 1.4 ATX versus TLS certificate
 
