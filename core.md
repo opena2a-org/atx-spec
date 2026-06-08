@@ -41,7 +41,7 @@ The ATX travels with the agent. When agent A calls agent B, A presents its ATX i
 
 ```json
 {
-  "atxVersion":       "1.0",
+  "atxVersion":       "1.1",
   "agentId":          "aim_7f3a9c2e",
   "agentDid":         "did:opena2a:agent:acme-corp/billing-agent",
   "publisher":        "acme-corp",
@@ -51,6 +51,19 @@ The ATX travels with the agent. When agent A calls agent B, A presents its ATX i
   "buildAttestation": "sha256:def456...",
   "transparencyLogIndex": 1847293,
   "capabilities":     ["db:read", "api:call"],
+  "declaredPurpose": {
+    "vocabVersion": "1",
+    "statement":    "Processes customer billing inquiries and issues refunds up to a supervisor-set limit.",
+    "category":     "financial-operations",
+    "taskScopes":   ["billing:inquiry", "billing:refund"],
+    "capabilityJustification": {
+      "db:read":  ["billing:inquiry"],
+      "api:call": ["billing:refund"]
+    },
+    "autonomy":     "supervised",
+    "dataScopes":   ["customer.billing", "customer.contact"],
+    "egressScopes": ["api.stripe.com", "hooks.internal.acme.com"]
+  },
   "behavioralProfile": {
     "checksum":       "sha256:ghi789...",
     "generatedAt":    "2026-05-19T00:00:00Z",
@@ -82,6 +95,8 @@ The ATX travels with the agent. When agent A calls agent B, A presents its ATX i
 Every field is mandatory unless explicitly marked optional in the ATP spec. The signature block carries at minimum one Ed25519 signature and one ML-DSA-65 signature. Quantum resistance is not deferred. It ships on day one.
 
 The version field is named `atcVersion` on the wire (the `atxVersion` shown in the illustration above is a documentation alias for the same field). Its value selects the canonical form the signatures cover: see §1.3a. `"1.0"` is the legacy eleven-field form; `"1.1"` signs the JCS (RFC 8785) canonicalization of a projected to-be-signed object, which brings `capabilities`, `scanSummary`, `issuerChain`, and `publisher` under the signature.
+
+`declaredPurpose` is an **optional** ATX 1.1 field (additive in 1.1; a 1.0 verifier ignores it). It is the publisher's signed, structured declaration of what the agent is *for* — an identity and attestation property, never an authorization input. Its semantics, sub-fields, and vocabulary are defined in §1.5; its treatment under the signature is defined in §1.3a.2.
 
 ### 1.2 ATX lifecycle
 
@@ -154,8 +169,9 @@ canonicalize to different bytes. The included keys are exactly:
 
 ```
 atcVersion, agentId, agentDid, publisher, publisherDid, version, contentHash,
-buildAttestation, capabilities, behavioralProfile, scanSummary, trustScore,
-trustLevel, issuedAt, expiresAt, issuerDid, issuerChain
+buildAttestation, capabilities, declaredPurpose (optional, see rule 5),
+behavioralProfile, scanSummary, trustScore, trustLevel, issuedAt, expiresAt,
+issuerDid, issuerChain
 ```
 
 Excluded, and MUST NOT appear in the TBS: `id`; `transparencyLogIndex` (a dead
@@ -183,6 +199,19 @@ credential that verifies across implementations and one that does not:
 4. **`issuerChain` is root-first and order-significant.** Element 0 is the root
    authority. JCS preserves array order and never sorts arrays, so reordering the
    chain changes the signed bytes.
+5. **`declaredPurpose` is presence-based (the one optional member).** Unlike every
+   other member, an absent `declaredPurpose` is **omitted from the TBS entirely**,
+   not emitted as a canonical empty. A credential MUST emit the key only when the
+   publisher declared a purpose, and then as a fully-populated object (§1.5); a
+   credential with no declared purpose produces the exact bytes it would have
+   produced before this field existed, so every previously pinned v1.1 vector and
+   signature stays valid. The JSON literal `null` and an empty object `{}` are
+   both treated as "absent" and MUST also be omitted, so there is no
+   present-but-empty form to disagree on. This is a deliberate, documented
+   exception to the "canonical empties are always present" rule above; it is the
+   pattern every future *optional* additive field follows. When the key is
+   present, JCS sorts its member names like any other nested object and it sits
+   between `contentHash` and `expiresAt` in the canonical output.
 
 The Ed25519 threshold signatures and the ML-DSA-65 hybrid signature are all
 computed over the **same** `JCS(TBS)` bytes. JCS itself sorts object member names
@@ -232,6 +261,96 @@ pipe string the v1.1 signature never covered, and verification fails closed.
 | Transparency | Certificate Transparency log | ATP transparency log (RFC 6962 compatible) |
 | Expiry | 90 days to 1 year | 7 days (forces rescan as hygiene) |
 | Contains behavior | No, identity only | Yes. Scan results, capabilities, behavioral profile |
+
+### 1.5 Declared purpose (optional)
+
+`declaredPurpose` is the publisher's structured, signed declaration of what an
+agent is *for*. `capabilities` bounds an agent's *reach* — which operations it may
+touch. `declaredPurpose` declares its *objective* — what those operations are
+meant to accomplish. The two are independent axes: capability scope answers "is
+this action permitted?"; declared purpose lets an offline observer ask the
+separate question "does this permitted action serve the declared objective?".
+
+The field is **optional and additive** in ATX 1.1. It is signed as part of the
+v1.1 TBS when present (§1.3a.2, rule 5), which makes a declaration **binding,
+attributable, and non-repudiable**: a publisher cannot later deny what its agent
+claimed to be for. The issuing authority attests *that this is what was declared*,
+not that it is true — the same trust split as a TLS certificate's Subject fields.
+
+#### 1.5.1 What it is not
+
+- **Never an authorization input.** The local verification algorithm (§1.3)
+  gains no purpose gate. Acceptance stays signature + expiry + revocation + chain.
+  A verifier MAY attach `declaredPurpose` to the request context (step 8) for its
+  own out-of-band policy, but OpenA2A's accept/reject path is purpose-blind.
+- **Never inferred.** `declaredPurpose` is publisher-declared and stable. It is
+  not a model's judgment of what an agent is doing; that is detection output and
+  lives in a separate plane (§3, Intelligence). Declared purpose is identity;
+  inferred intent is detection. The two are never conflated, and inferred intent
+  is never written into a credential or a DID document.
+
+#### 1.5.2 Sub-fields
+
+| Sub-field | Req? | Type / rule |
+|---|---|---|
+| `vocabVersion` | core | the purpose-vocabulary version this declaration was issued against (currently `"1"`), so a later vocabulary revision never silently re-interprets an old credential. |
+| `statement` | core | string, ≤ 280 chars. Human- and audit-readable intent. Secondary: it is attacker-controllable content, so it is judged only by a non-generative classifier and is never the sole basis for a machine judgment. |
+| `category` | core | one value from the closed core vocabulary (§1.5.3) or an org-namespaced custom value (`<org>.<name>`). |
+| `taskScopes` | core | array of `namespace:objective` tokens, grammar `^[a-z][a-z0-9]*:[a-z][a-z0-9_]*$`, at the *objective* level. The primary machine-comparable anchor. |
+| `capabilityJustification` | core | map of each granted `capability` → the `taskScope(s)` it serves. Keys MUST be a subset of `capabilities`. Ties reach to objective and drives the breadth measure (§1.5.4). |
+| `autonomy` | optional | enum `supervised` \| `human_in_loop` \| `autonomous`. |
+| `dataScopes` | optional | array of declared data domains the agent operates over. An in-scope action touching an undeclared data domain is a detectable tell. |
+| `egressScopes` | optional | array of declared external destinations (hostnames/domains; no paths, no secrets). An in-scope action egressing to an undeclared destination is the covert-exfiltration tell — the degree of freedom a faithfully-declared action type can still be abused in. |
+
+No sub-field carries PII or secrets: the object is signed, travels with every
+request, and may be written to the transparency log.
+
+#### 1.5.3 Vocabulary
+
+`category` and the `taskScope` namespaces are **governed, versioned vocabularies**
+— closed core plus org-namespaced custom — managed like the capability registry.
+The core `category` values (vocab v1), each with a breadth class and a
+sensitivity class, are: `customer-support`, `financial-operations`,
+`data-analysis`, `data-engineering`, `software-development`, `devops-automation`,
+`security-operations`, `content-generation`, `research-assistant`,
+`sales-marketing`, `hr-people-ops`, `legal-compliance`, `healthcare-clinical`,
+`device-control`, `agent-orchestration`. There is deliberately no catch-all
+category. Custom categories (`<org>.<name>`) default to the broadest, most
+sensitive class until reviewed, so custom is never a cheap way to claim a narrow
+profile. The reserved core `taskScope` namespaces (vocab v1) are: `support`,
+`billing`, `accounting`, `analytics`, `dataops`, `dev`, `ci`, `infra`, `secops`,
+`content`, `research`, `crm`, `people`, `legal`, `clinical`, `device`,
+`orchestrate`. A non-reserved namespace is a custom org taskScope.
+
+`security-operations` and `device-control` are legitimately dual-use (a security
+agent's behavior resembles an attacker's; device control has physical-world
+impact). They may not be declared with a narrow breadth, and their
+`capabilityJustification` must enumerate each sensitive capability explicitly —
+no wildcard.
+
+#### 1.5.4 Breadth is measured, not claimed
+
+Purpose breadth is computed from `capabilityJustification`, not from how
+taskScope tokens are named (which an adversary could craft to sound narrow). The
+measure is the count of distinct capability *namespaces* across all
+justification entries; a "narrow" declaration that justifies `secrets:*`,
+`network:connect`, and `system:exec` scores broad regardless of its token names.
+A computed breadth above the category's class raises the floor; it never lowers
+it. An over-broad declaration is therefore a visible, scoreable downgrade rather
+than a free pass — the property that makes a vague "cover everything" purpose
+useless as cover.
+
+#### 1.5.5 Verifier and trust guidance
+
+- **Absence MUST NOT cause rejection.** During the optional phase a verifier that
+  refuses credentials lacking `declaredPurpose` fragments the network. Absence is
+  at most a weak telemetry signal ("an agent executing a sensitive sequence
+  without a declared purpose"), never a hard gate.
+- **A declared purpose does not buy trust.** Purpose specificity sets *detection
+  sensitivity* — a narrow declaration is held to a tighter consistency test — but
+  it MUST NOT raise an agent's trust prior. Otherwise a signed, coherent-looking
+  purpose becomes an alibi that suppresses scrutiny while the agent covertly does
+  something else. The declaration tightens the test; it does not vouch for intent.
 
 ---
 
