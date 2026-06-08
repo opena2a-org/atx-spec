@@ -1,3 +1,5 @@
+> **OpenA2A specs** · [did:opena2a](https://specs.opena2a.org/specs/did-opena2a) · [AIP](https://specs.opena2a.org/specs/aip) · **ATX** · [ATP](https://specs.opena2a.org/specs/atp) · [AAP](https://specs.opena2a.org/specs/aap) · [AIM](https://specs.opena2a.org/specs/aim) · [all specs ↗](https://specs.opena2a.org)
+
 # atx-spec
 
 Architecture specifications for the **Agent Trust eXtension (ATX)** credential format and the **Agent Trust Protocol (ATP)** that issues, verifies, and revokes it.
