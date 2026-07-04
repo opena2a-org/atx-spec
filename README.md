@@ -16,13 +16,13 @@ ATX is a signed, self-contained credential carried by every AI agent. It is anal
 
 ## Status
 
-Architecture specifications, v1.0 (May 2026). Reference implementation tracked in [`opena2a-org/agent-identity-management`](https://github.com/opena2a-org/agent-identity-management) (AIM).
+Architecture specifications, document version 1.1.0-final (July 2026; first published May 2026). The normative credential wire format is **ATX 1.1** (JCS canonical signing form, [`core.md`](core.md) §1.3a.2) — this is what production issuance emits; ATX 1.0 is frozen legacy with a documented transition rule (§1.3a.5). Reference implementation tracked in [`opena2a-org/agent-identity-management`](https://github.com/opena2a-org/agent-identity-management) (AIM). Changes are tracked in [`CHANGELOG.md`](CHANGELOG.md).
 
 ATX/ATP/AIP cross-reference: see [`opena2a-org/agent-trust-protocol`](https://github.com/opena2a-org/agent-trust-protocol) for the ATP wire protocol spec and [`opena2a-org/agent-identity-protocol`](https://github.com/opena2a-org/agent-identity-protocol) for the AIP identity spec.
 
 ## Conformance
 
-Byte-stable conformance fixtures and SDK-independent reference verifiers for ATX v1.0 live at [`opena2a-org/atx-conformance`](https://github.com/opena2a-org/atx-conformance). The suite ships eight fixtures (baseline valid, hybrid Ed25519 plus ML-DSA-65, threshold 2-of-3 cosignature, revoked, expired, wrong-issuer, tampered-signature, malformed-schema), each pinned by SHA-256 in `MANIFEST.sha256`, plus two reference verifiers: Go (full hybrid via Cloudflare CIRCL) and Python (Ed25519 only; post-quantum verification out of scope for the Python stdlib stack). Both verifiers report 8 of 8 PASS against the shipped fixture set.
+Byte-stable conformance fixtures and SDK-independent reference verifiers for ATX v1.0 and v1.1 live at [`opena2a-standards/atx-conformance`](https://github.com/opena2a-standards/atx-conformance). The suite ships 15 fixtures — the v1.0 set (baseline valid, hybrid Ed25519 plus ML-DSA-65, threshold 2-of-3 cosignature, revoked, expired, wrong-issuer, cross-issuer-key, tampered-signature, malformed-schema) plus the `v1_1-*` family (JCS-form baselines, signed-field integrity via tampered `capabilities`, issuer binding, and `declaredPurpose` carried under the signature) — each pinned by SHA-256 in `MANIFEST.sha256`, plus two reference verifiers: Go (full hybrid via Cloudflare CIRCL) and Python (Ed25519 only; post-quantum verification out of scope for the Python stdlib stack). Both verifiers report 15 of 15 PASS against the shipped fixture set, and the suite's `jcs-vectors/` gate pins the cross-language `JCS(TBS)` byte agreement that [`core.md`](core.md) §1.3a.3 makes mandatory. Conformance targets (credential, issuer, verifier) are defined in [`core.md`](core.md) §12.
 
 Second-party implementations of ATX issuance or verification are tracked on [a2aproject/A2A#1876](https://github.com/a2aproject/A2A/issues/1876).
 
