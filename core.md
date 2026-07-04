@@ -2,9 +2,19 @@
 
 **Certificate authority infrastructure for AI agents**
 
-Version 1.0. May 2026. Defines the Agent Trust eXtension credential format, the Agent Trust Protocol that issues and verifies it, and the architectural commitments that make the system survive at planetary scale.
+**Document version:** 1.1.0-final (July 2026; first published as "Version 1.0", May 2026)
+**Credential format status:** ATX 1.1 is the current, normative wire format (§1.3a.2) and is what production issuance emits; ATX 1.0 is frozen legacy (§1.3a.1), accepted per the transition rule in §1.3a.5.
+**Protocol status:** the ATP wire protocol (§2) is normatively specified in [ATP-SPEC v1.0.0-rc1](https://github.com/opena2a-standards/agent-trust-protocol); this document defines the architecture it implements. Identity (AIP) and authorization (AAP) layers beneath this document carry their own, earlier maturity levels — a claim in this document never upgrades theirs.
+
+Defines the Agent Trust eXtension credential format, the Agent Trust Protocol that issues and verifies it, and the architectural commitments that make the system survive at planetary scale.
 
 This document replaces the prior ATC architecture v2.0 (March 2026). The credential is now ATX. The protocol around it is ATP. Everything else continues forward.
+
+## Conventions and terminology
+
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be interpreted as described in BCP 14 ([RFC 2119](https://www.rfc-editor.org/rfc/rfc2119), [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174)) when, and only when, they appear in all capitals, as shown here.
+
+Normative requirements in this document are concentrated in §1 (credential format, canonical signing forms, verification algorithm) and §12–§14 (conformance, security, registries). Sections 0 and 2–11 are architectural: they explain the system the requirements produce and constrain implementations only where they use BCP 14 key words.
 
 ---
 
@@ -614,4 +624,62 @@ These six commitments are how the system survives at scale, how governments are 
 
 ---
 
-*ATX core architecture v1.0. May 2026. OpenA2A. Apache 2.0. Successor to ATC v2.0.*
+## 12. Conformance
+
+Three conformance targets exist. An implementation claims conformance for one or more of them; the claims are independent.
+
+**Credential (an ATX instance).** A conforming ATX carries every mandatory field of §1.1, selects exactly one canonical signing form by its version field (§1.3a), and its signatures verify over the bytes that form produces. A v1.1 credential MUST satisfy the determinism rules of §1.3a.2.
+
+**Issuer.** A conforming issuer emits only conforming credentials, signs `JCS(TBS)` bytes that are byte-identical to what the conformance vectors pin (§1.3a.3), logs every issuance and revocation to the transparency log before it takes effect (§11 commitment 3), and never requires a verifier to contact it on the verification path (§9).
+
+**Verifier.** A conforming verifier implements the local verification algorithm of §1.3, dispatching on the credential's version field, and rejects on the failure of any step. It MUST treat the §1.3a.1 unsigned fields as unauthenticated under `atcVersion` `1.0` (§1.3a.4), and it MUST NOT add a network dependency on the issuing node to the acceptance path.
+
+**Conformance suite.** The executable definition of these claims is the byte-pinned fixture set and SDK-independent reference verifiers at [`opena2a-standards/atx-conformance`](https://github.com/opena2a-standards/atx-conformance): 15 fixtures (baseline, hybrid, threshold cosignature, revocation, expiry, issuer binding, tamper rejection, malformed schema, and the `v1_1-*` family covering JCS signing, signed-field integrity, and `declaredPurpose`), each pinned by SHA-256 in its `MANIFEST.sha256`, plus the `jcs-vectors` cross-language byte-agreement gate. An implementation claiming issuer or verifier conformance MUST produce the pinned verdict on every fixture and, for v1.1 issuance, MUST reproduce every `jcs-vectors` `expected.canonicalHex` byte-for-byte. The suite's machine-readable profile (`conformance.json`) maps each fixture to the requirement it tests.
+
+Requirements the suite does not yet cover (revocation propagation timing, transparency-log monitor behavior, federation cosigning) are conformance claims an implementer self-attests against §3, §6, and §7 until fixtures exist; the suite's `notCovered` list is authoritative for the gap.
+
+---
+
+## 13. Security considerations
+
+Attack techniques are cited by agent-threat-matrix ID ([threats.opena2a.org](https://threats.opena2a.org)) per architectural commitment 2.
+
+**Unsigned v1.0 fields are forgeable (T-4001 Capability Override).** The legacy form signs eleven fields (§1.3a.1); `capabilities`, `scanSummary`, `issuerChain`, and `publisher` are not among them. A holder can rewrite any of these in a v1.0 credential without breaking its signature. Every consumer making decisions on those fields MUST enforce §1.3a.4 (require v1.1). This is the single most important verifier-side rule in this document.
+
+**Stolen credentials replay (T-5004 Credential Reuse).** An ATX is a bearer artifact: presenting it proves what was attested about an agent build, not that the presenter is that agent. Exfiltrated credentials replay until expiry — the 7-day TTL (§1.2) and the CRL (§3.3) bound the window, and deep verification (`contentHash` check, §1.3 step 7; runtime self-attestation, §5) binds the credential to the running artifact. Deployments where impersonation matters MUST pair ATX presentation with a proof-of-possession channel (AIP identity keys); ATX alone does not provide one.
+
+**Compromised build tooling (T-9006 Supply Chain Compromise, T-9003 Malicious Code Deployment).** The build plugin verifies scanner binaries against their own ATX credentials before executing them (§4.2) precisely because the scanners are the trust bootstrap: a compromised scanner otherwise attests a clean build of malicious code. The residual risk is a compromise of the build environment itself (OIDC token theft within the 15-minute TTL, §3.1); transparency-log monitoring (§6.4) is the detection layer for issuances that should not exist.
+
+**Key substitution at resolution (T-4007 Tool Impersonation and Squatting).** Verification resolves `issuerDid` to a key through a cached DID document (§1.3 step 3). An attacker who can serve a substituted DID document controls which key verifies. Resolvers MUST fetch DID documents over authenticated channels, and the federation trust list (§7) bounds which issuers are accepted at all — an unknown issuer with a valid self-signature is still rejected.
+
+**Delegation and chain abuse (T-4004 Delegation Abuse).** `issuerChain` is order-significant and signed under v1.1 (§1.3a.2 rule 4). Trust level 3+ requires signatures from at least two distinct authorities (§1.3 step 7), and level 4 requires root cosigning (§7), so no single compromised node can mint the highest trust levels.
+
+**Revocation staleness.** A verifier on a stale CRL accepts a revoked agent for up to the cache TTL (5 minutes, §3.3). This is a deliberate availability trade (fail-open on cache, never on signature): the bound MUST be documented to relying parties, and verifiers MUST NOT extend the CRL TTL beyond 5 minutes for trust-level-3+ decisions.
+
+**Purpose as alibi.** `declaredPurpose` is attacker-authored content under a valid signature. It MUST NOT raise a trust prior (§1.5.5) — a coherent declared purpose is a tightened detection baseline, never evidence of benign intent. The `statement` free-text sub-field is judged only by non-generative classifiers (§1.5.2) to keep prompt-injection payloads inside it from reaching a generative evaluator.
+
+**Downgrade resistance.** `atcVersion` sits inside the v1.1 TBS, so stripping a v1.1 credential to the legacy form fails closed (§1.3a.5). Verifiers MUST NOT accept a credential whose version field selects a form its signatures do not verify under.
+
+**Cryptographic agility.** Every credential carries Ed25519 and ML-DSA-65 signatures (§1.1); verifiers verify all signatures present for the suites they support. A verifier that ignores the ML-DSA-65 signature accepts classical-only assurance and MUST NOT claim post-quantum verification.
+
+---
+
+## 14. Registry considerations
+
+This specification is not (yet) under IANA administration; the registries below are governed by the OpenA2A standards organization ([`opena2a-standards`](https://github.com/opena2a-standards)) with the same discipline an IANA section would impose: closed sets change only by specification revision, namespaced sets accept registrations by pull request against the governing repository.
+
+| Registry | Governed set | Change policy |
+|---|---|---|
+| ATX version numbers | `1.0` (frozen legacy), `1.1` (current) | Specification revision only. A new version number is REQUIRED whenever the canonical signing form changes (§1.3a); reusing a version for different bytes is forbidden. |
+| Signature algorithm suites | `Ed25519`, `ML-DSA-65` | Specification revision via ATP version negotiation (§10). |
+| DID type prefixes (`did:opena2a`) | `agent`, `authority`, `publisher`, `mcp_server`, `a2a_agent`, `skill`, `ai_tool`, `llm` | Registered in the [did:opena2a method specification](https://github.com/opena2a-standards/did-method-opena2a); additions by PR there, mirrored into §2 here. |
+| `declaredPurpose` category vocabulary | 15 core values (§1.5.3), versioned via `vocabVersion` | Core set changes by specification revision with a `vocabVersion` bump; `<org>.<name>` custom values need no registration but default to the broadest class until reviewed (§1.5.3). |
+| `taskScope` namespaces | 17 reserved core namespaces (§1.5.3) | Same policy as categories; non-reserved namespaces are org-custom. |
+| Capability tokens | `namespace:operation` grammar | Governed with the capability registry in AIM; `capabilityJustification` keys MUST be a subset of the granted set (§1.5.2). |
+| Transparency-log entry types | issuance, revocation, build attestation (§6) | ATP-SPEC revision. |
+
+If ATP enters IETF process (§2), these registries are the candidates for genuine IANA sections; their change policies are written so that transition is a renaming, not a redesign.
+
+---
+
+*ATX core architecture v1.1.0. July 2026 (first published May 2026). OpenA2A. Apache 2.0. Successor to ATC v2.0.*
