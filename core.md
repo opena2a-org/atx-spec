@@ -222,7 +222,15 @@ credential that verifies across implementations and one that does not:
    produced before this field existed, so every previously pinned v1.1 vector and
    signature stays valid. The JSON literal `null` and an empty object `{}` are
    both treated as "absent" and MUST also be omitted, so there is no
-   present-but-empty form to disagree on. This is a deliberate, documented
+   present-but-empty form to disagree on. Emptiness is decided at the JSON
+   parse level: any serialization that parses to the empty object (including
+   whitespace variants such as `{ }`) is the empty object. A present value
+   that is **anything else — including a non-object value (array, string,
+   number, boolean) — MUST be included in the TBS verbatim**; a verifier MUST
+   NOT normalize an unexpected value away, because silently omitting it would
+   let unsigned purpose content ride a valid signature (the injection the
+   conformance suite pins with its `v1_1-declared-purpose-*-injected`
+   fixtures). This is a deliberate, documented
    exception to the "canonical empties are always present" rule above; it is the
    pattern every future *optional* additive field follows. When the key is
    present, JCS sorts its member names like any other nested object and it sits

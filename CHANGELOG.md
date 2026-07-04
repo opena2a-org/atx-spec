@@ -8,6 +8,18 @@ identifier registered in `core.md` §14.
 
 ## [Unreleased]
 
+### Changed
+
+- §1.3a.2 rule 5 pins the degenerate `declaredPurpose` inputs the reference
+  verifiers disagreed on (atx-conformance#11): emptiness is a JSON-parse-level
+  property (whitespace variants of `{}` are the empty object), and any other
+  present value — including non-object values — MUST enter the TBS verbatim,
+  so unsigned injected purpose content breaks the signature instead of being
+  silently normalized away.
+- `schemas/atx-credential-v1.1.schema.json`: `declaredPurpose` now also
+  accepts the empty object (wire-tolerated, treated as absent), matching
+  rule 5.
+
 ### Added
 
 - `schemas/atx-credential-v1.1.schema.json`: machine-readable JSON Schema
