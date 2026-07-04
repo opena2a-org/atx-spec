@@ -10,6 +10,10 @@ identifier registered in `core.md` §14.
 
 ### Changed
 
+- §12 and README conformance-suite counts synced to the 18-fixture suite
+  (atx-conformance#14 added the three rule-5 degenerate declaredPurpose
+  fixtures).
+
 - §1.3a.2 rule 5 pins the degenerate `declaredPurpose` inputs the reference
   verifiers disagreed on (atx-conformance#11): emptiness is a JSON-parse-level
   property (whitespace variants of `{}` are the empty object), and any other
