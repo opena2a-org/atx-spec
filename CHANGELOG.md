@@ -6,6 +6,31 @@ versions follow the OpenA2A spec-family ladder `MAJOR.MINOR.PATCH-{draft|rcN|fin
 the ATX **credential wire format** version (`atcVersion` `1.0` / `1.1`) is a separate
 identifier registered in `core.md` §14.
 
+## [Unreleased]
+
+### Added
+
+- `schemas/atx-credential-v1.1.schema.json`: machine-readable JSON Schema
+  (draft 2020-12) for the ATX credential wire form, derived from §1.1/§1.3a/§1.5
+  with the atx-conformance fixtures as ground truth. All 15 fixtures validate as
+  intended (14 shape-valid; `malformed-schema` fails on exactly the `atcVersion`
+  registry enum).
+- `scripts/validate_examples.py` + `schemas/examples-map.json` + CI workflow:
+  every schema is metaschema-checked and the §1.1 example is validated against
+  the schema on every push and PR.
+
+### Changed
+
+- `core.md` §1.1: the credential illustration is now wire-shape-accurate and
+  schema-valid — field name `atcVersion` (previously shown under the `atxVersion`
+  alias), bare-hex `contentHash`, provenance-URI `buildAttestation`,
+  `scanSummary` with `highFindings` and the wire spellings `cryptoServe` /
+  `no-weak-crypto`, `trustScore` on the wire's 0-100 scale, full-DID `keyId`
+  values, and the issuance envelope fields `id` / `revoked` / `createdAt`.
+- `core.md` §2 and §14: the `did:opena2a` type-prefix set now matches the
+  did-method registry — `registry` added; `a2a_agent` documented as a deprecated
+  legacy alias of `agent`, not a registered type.
+
 ## [1.1.0] - 2026-07-03
 
 ### Added

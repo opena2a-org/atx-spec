@@ -1,0 +1,7 @@
+[
+  {
+    "file": "core.md",
+    "heading": "### 1.1 ATX schema",
+    "schema": "schemas/atx-credential-v1.1.schema.json"
+  }
+]

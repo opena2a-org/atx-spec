@@ -51,14 +51,15 @@ The ATX travels with the agent. When agent A calls agent B, A presents its ATX i
 
 ```json
 {
-  "atxVersion":       "1.1",
+  "id":               "b3d0a7e2-4f6c-4b9e-9a2d-8c1e5f7a9b3c",
+  "atcVersion":       "1.1",
   "agentId":          "aim_7f3a9c2e",
   "agentDid":         "did:opena2a:agent:acme-corp/billing-agent",
   "publisher":        "acme-corp",
   "publisherDid":     "did:opena2a:publisher:acme-corp",
   "version":          "2.1.4",
-  "contentHash":      "sha256:abc123...",
-  "buildAttestation": "sha256:def456...",
+  "contentHash":      "3f8a1c5d9e2b7f4a6c0d8e1b5a9f3c7e2d6b0a4f8c1e5d9b3a7f0c4e8d2b6a1f",
+  "buildAttestation": "https://slsa.dev/provenance/v1#acme-corp/billing-agent",
   "transparencyLogIndex": 1847293,
   "capabilities":     ["db:read", "api:call"],
   "declaredPurpose": {
@@ -75,36 +76,40 @@ The ATX travels with the agent. When agent A calls agent B, A presents its ATX i
     "egressScopes": ["api.stripe.com", "hooks.internal.acme.com"]
   },
   "behavioralProfile": {
-    "checksum":       "sha256:ghi789...",
+    "checksum":       "sha256:1c5d9e2b7f4a6c0d",
     "generatedAt":    "2026-05-19T00:00:00Z",
     "observationDays": 14
   },
   "scanSummary": {
     "hma":              "passed",
     "criticalFindings": 0,
+    "highFindings":     0,
     "secretless":       "clean",
-    "cryptoserve":      "no_weak_crypto",
+    "cryptoServe":      "no-weak-crypto",
     "oasbLevel":        "L2"
   },
-  "trustScore":   0.87,
+  "trustScore":   87.5,
   "trustLevel":   3,
   "issuedAt":     "2026-05-19T00:00:00Z",
   "expiresAt":    "2026-05-26T00:00:00Z",
   "issuerDid":    "did:opena2a:authority:opena2a.org",
   "issuerChain": [
-    "did:opena2a:authority:opena2a.org",
-    "did:opena2a:authority:google.com"
+    "did:opena2a:authority:opena2a.org"
   ],
   "signatures": [
-    { "keyId": "opena2a.org#key-v3", "algorithm": "Ed25519",   "value": "..." },
-    { "keyId": "opena2a.org#pqc-v1", "algorithm": "ML-DSA-65", "value": "..." }
-  ]
+    { "keyId": "did:opena2a:authority:opena2a.org#key-v3", "algorithm": "Ed25519",   "value": "sfxSAtxm3TwrzodrXyjph5dEBGePWAot8lz96WdlCrCDYGlHvuAYhgWF/GCzwsFDxjWXUFYTUX0DN+0ofCvRAw==" },
+    { "keyId": "did:opena2a:authority:opena2a.org#pqc-v1", "algorithm": "ML-DSA-65", "value": "m5oAcs2LqmMNQmvUeQdCzXh0nBhTsFhkNCJmQeXwqUvVbTgKdRz3l" }
+  ],
+  "revoked":   false,
+  "createdAt": "2026-05-19T00:00:00Z"
 }
 ```
 
+The illustration is wire-shape-accurate but its hash and signature values are placeholders — it does not verify. The machine-readable definition of this shape is [`schemas/atx-credential-v1.1.schema.json`](./schemas/atx-credential-v1.1.schema.json); the atx-conformance fixtures are the byte ground truth.
+
 Every field is mandatory unless explicitly marked optional in the ATP spec. The signature block carries at minimum one Ed25519 signature and one ML-DSA-65 signature. Quantum resistance is not deferred. It ships on day one.
 
-The version field is named `atcVersion` on the wire (the `atxVersion` shown in the illustration above is a documentation alias for the same field). Its value selects the canonical form the signatures cover: see §1.3a. `"1.0"` is the legacy eleven-field form; `"1.1"` signs the JCS (RFC 8785) canonicalization of a projected to-be-signed object, which brings `capabilities`, `scanSummary`, `issuerChain`, and `publisher` under the signature.
+The version field is named `atcVersion` on the wire (earlier revisions of this document illustrated it under the alias `atxVersion`). Its value selects the canonical form the signatures cover: see §1.3a. `"1.0"` is the legacy eleven-field form; `"1.1"` signs the JCS (RFC 8785) canonicalization of a projected to-be-signed object, which brings `capabilities`, `scanSummary`, `issuerChain`, and `publisher` under the signature. `trustScore` rides the wire as a 0-100 JSON number; the v1.1 to-be-signed projection string-encodes it (§1.3a.2 rule 3). The issuance envelope fields `id`, `revoked`, and `createdAt` (plus `revokedAt`/`revocationReason` once revoked) accompany every issued credential and are excluded from the signed bytes (§1.3a.2).
 
 `declaredPurpose` is an **optional** ATX 1.1 field (additive in 1.1; a 1.0 verifier ignores it). It is the publisher's signed, structured declaration of what the agent is *for* — an identity and attestation property, never an authorization input. Its semantics, sub-fields, and vocabulary are defined in §1.5; its treatment under the signature is defined in §1.3a.2.
 
@@ -371,7 +376,7 @@ ATX is the artifact. ATP is the protocol that issues, verifies, revokes, and fed
 ATP defines five things:
 
 1. **The ATX format itself.** Schema, signature suite, encoding rules. Published as an open standard.
-2. **The DID method `did:opena2a`.** How publishers, agents, and authorities are named. How keys are bound to identities. How key rotation works without breaking existing credentials. Type prefixes registered: `agent`, `authority`, `publisher`, `mcp_server`, `a2a_agent`, `skill`, `ai_tool`, `llm`. Shared with AIP (Agent Identity Protocol) and ATP-SPEC v1.0.0-rc1.
+2. **The DID method `did:opena2a`.** How publishers, agents, and authorities are named. How keys are bound to identities. How key rotation works without breaking existing credentials. Type prefixes registered: `registry`, `authority`, `publisher`, `agent`, `mcp_server`, `ai_tool`, `llm`, `skill` (`a2a_agent` is a deprecated legacy alias of `agent`, not a registered type). Shared with AIP (Agent Identity Protocol) and ATP-SPEC v1.0.0-rc1.
 3. **The transparency log format.** RFC 6962 binary Merkle tree. Signed Tree Head schema. Inclusion and consistency proof formats.
 4. **The federation protocol.** How nodes register with each other, exchange public keys, cosign credentials, propagate revocations, and maintain trust lists.
 5. **The revocation list format.** Delta CRLs, signed CRL endpoints, push notification format, cache semantics.
@@ -672,7 +677,7 @@ This specification is not (yet) under IANA administration; the registries below 
 |---|---|---|
 | ATX version numbers | `1.0` (frozen legacy), `1.1` (current) | Specification revision only. A new version number is REQUIRED whenever the canonical signing form changes (§1.3a); reusing a version for different bytes is forbidden. |
 | Signature algorithm suites | `Ed25519`, `ML-DSA-65` | Specification revision via ATP version negotiation (§10). |
-| DID type prefixes (`did:opena2a`) | `agent`, `authority`, `publisher`, `mcp_server`, `a2a_agent`, `skill`, `ai_tool`, `llm` | Registered in the [did:opena2a method specification](https://github.com/opena2a-standards/did-method-opena2a); additions by PR there, mirrored into §2 here. |
+| DID type prefixes (`did:opena2a`) | `registry`, `authority`, `publisher`, `agent`, `mcp_server`, `ai_tool`, `llm`, `skill` (`a2a_agent`: deprecated legacy alias of `agent`) | Registered in the [did:opena2a method specification](https://github.com/opena2a-standards/did-method-opena2a); additions by PR there, mirrored into §2 here. |
 | `declaredPurpose` category vocabulary | 15 core values (§1.5.3), versioned via `vocabVersion` | Core set changes by specification revision with a `vocabVersion` bump; `<org>.<name>` custom values need no registration but default to the broadest class until reviewed (§1.5.3). |
 | `taskScope` namespaces | 17 reserved core namespaces (§1.5.3) | Same policy as categories; non-reserved namespaces are org-custom. |
 | Capability tokens | `namespace:operation` grammar | Governed with the capability registry in AIM; `capabilityJustification` keys MUST be a subset of the granted set (§1.5.2). |
