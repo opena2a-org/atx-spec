@@ -530,18 +530,28 @@ MTH(D[n]) = SHA256(0x01 || MTH(D[0:k]) || MTH(D[k:n]))   where k is the largest 
 
 Published every 5 minutes maximum. Any gap greater than 10 minutes is a monitor alert. The STH is the anchor that external parties verify against.
 
+The transparency log is ATP's domain, and the STH wire shape is normatively
+pinned there: ATP-SPEC §5.6 with
+[`signed-tree-head-v1.schema.json`](https://github.com/opena2a-standards/agent-trust-protocol/blob/main/schemas/signed-tree-head-v1.schema.json),
+byte-pinned by the atp-conformance `transparency-log-sth` fixture. The
+Ed25519 signature is computed over the 32 raw bytes decoded from `rootHash`:
+
 ```json
 {
-  "treeSize":  1847294,
-  "timestamp": "2026-05-19T14:00:00Z",
-  "rootHash":  "sha256:789abc...",
-  "logId":     "did:opena2a:authority:opena2a.org",
-  "signatures": [
-    { "keyId": "opena2a.org#key-v3", "algorithm": "Ed25519",   "value": "..." },
-    { "keyId": "opena2a.org#pqc-v1", "algorithm": "ML-DSA-65", "value": "..." }
-  ]
+  "treeSize": 1847294,
+  "timestamp": "2026-05-23T00:00:00Z",
+  "rootHash": "SHA256:111cc6504a7f35183bef35aa9d647cc3c799278325354d4446bb0157079b1602",
+  "signedBy": "did:opena2a:authority:opena2a.org#key-1",
+  "signature": "egu1YqeoHIW9w7e7fmaFUECdMv6HbOABUDwi6BHQMZn7vkPveBg34g3e3Jptlkw5GqipnytIKmLUs7W4xoCjCQ=="
 }
 ```
+
+An earlier revision of this section illustrated a hybrid variant
+(`logId` + a `signatures[]` array carrying Ed25519 and ML-DSA-65 entries).
+That shape is NOT the pinned wire format; a multi-signature STH — the
+natural carrier for a post-quantum leg and for §7 cross-org cosigning —
+is a possible future ATP extension, not something a verifier should accept
+today.
 
 ### 6.4 Monitors
 
