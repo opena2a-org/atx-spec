@@ -6,6 +6,10 @@ Architecture specifications for the **Agent Trust eXtension (ATX)** credential f
 
 ATX is a signed, self-contained credential carried by every AI agent. It is analogous to a TLS certificate but contains agent identity, scan results, capabilities, and behavioral profile. Local verification under 5ms. Ed25519 + ML-DSA-65 hybrid signatures mandatory at v1.
 
+## Contributing
+
+This specification is early and authored in the open. We are looking for co-authors, an independent second implementation, and cryptographic review before it goes to an external standards body. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Documents
 
 | Doc | Scope |
