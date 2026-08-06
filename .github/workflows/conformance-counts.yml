@@ -1,0 +1,43 @@
+name: conformance counts
+
+# README.md and core.md section 12 both state how many fixtures the
+# atx-conformance suite ships and what the reference verifiers report. Those are
+# measurements taken in another repository, so they are enforced here rather than
+# restated by hand: the count sat at 18 for a month while the suite shipped 20.
+#
+# The suite is checked out at main, not at a pinned SHA, on purpose. The drift
+# being caught is exactly "the suite moved and the spec did not", so pinning
+# would reproduce the bug. A fixture landing in atx-conformance is expected to
+# turn this job red until the count here is updated; that is the signal, and the
+# fix is a one-line edit plus a CHANGELOG note.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Lets the suite repository surface drift here without waiting for a commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  counts:
+    name: stated fixture counts match atx-conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out the conformance suite
+        uses: actions/checkout@v4
+        with:
+          repository: opena2a-standards/atx-conformance
+          ref: main
+          path: .suite
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Stated counts match the shipped fixture set
+        run: python3 scripts/check_conformance_counts.py --suite .suite

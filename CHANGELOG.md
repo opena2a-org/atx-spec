@@ -10,6 +10,20 @@ identifier registered in `core.md` §14.
 
 ### Changed
 
+- §12 and README conformance-suite counts corrected to the 20-fixture suite, and
+  their fixture descriptions extended to name the strict-parse family that was
+  never documented here: duplicate object members rejected at any depth
+  (RFC 8259 §4) and case-variant members that a last-wins JSON decoder would
+  collapse rejected as `PARSE_ERROR`. Those two fixtures landed in
+  atx-conformance on 2026-07-05 and 2026-07-06, after the previous sync to 18,
+  so both the count and the description had been understating the suite.
+- `scripts/check_conformance_counts.py` + `.github/workflows/conformance-counts.yml`:
+  the stated counts are now recomputed from a checkout of atx-conformance@main
+  on every push and pull request instead of being maintained by hand. The suite
+  is not pinned, because the drift being caught is precisely "the suite moved and
+  this repository did not". The guard also fails when a document states no count
+  at all, so it cannot pass vacuously.
+
 - §12 and README conformance-suite counts synced to the 18-fixture suite
   (atx-conformance#14 added the three rule-5 degenerate declaredPurpose
   fixtures).
