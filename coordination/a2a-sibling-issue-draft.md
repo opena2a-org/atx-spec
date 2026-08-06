@@ -22,11 +22,11 @@ OpenA2A maintains an open spec set that composes with the A2A Identity Trust Fra
 
 | Spec | Scope | Source |
 |---|---|---|
-| **AIP**, Agent Identity Protocol, v1.0.0-draft | Identity, capabilities, verification, trust scoring, governance, lifecycle, audit | [`opena2a-org/agent-identity-protocol`](https://github.com/opena2a-org/agent-identity-protocol) |
-| **ATP**, Agent Trust Protocol, v1.0.0-rc1 | Trust proofs, RFC 6962 transparency log, federation, discovery, revocation | [`opena2a-org/agent-trust-protocol`](https://github.com/opena2a-org/agent-trust-protocol) |
-| **ATX**, Agent Trust eXtension credential format, v1.0 | Signed self-contained credential carried by every agent. Local verification under 5ms target. Spec mandates Ed25519 plus ML-DSA-65 hybrid signatures at v1. | [`opena2a-org/atx-spec`](https://github.com/opena2a-org/atx-spec) |
+| **AIP**, Agent Identity Protocol, v1.0.0-draft | Identity, capabilities, verification, trust scoring, governance, lifecycle, audit | [`opena2a-standards/agent-identity-protocol`](https://github.com/opena2a-standards/agent-identity-protocol) |
+| **ATP**, Agent Trust Protocol, v1.0.0-rc1 | Trust proofs, RFC 6962 transparency log, federation, discovery, revocation | [`opena2a-standards/agent-trust-protocol`](https://github.com/opena2a-standards/agent-trust-protocol) |
+| **ATX**, Agent Trust eXtension credential format, v1.0 | Signed self-contained credential carried by every agent. Local verification under 5ms target. Spec mandates Ed25519 plus ML-DSA-65 hybrid signatures at v1. | [`opena2a-standards/atx-spec`](https://github.com/opena2a-standards/atx-spec) |
 
-All three use the unified DID method `did:opena2a:<type>:<id>` where `<type>` is one of `agent`, `authority`, `publisher`, `mcp_server`, `a2a_agent`, `skill`, `ai_tool`, `llm`. DID method unification across the three specs is the most recent reconciliation work; commits landed today on the working branches linked above.
+All three use the unified DID method `did:opena2a:<type>:<id>` where `<type>` is one of `agent`, `authority`, `publisher`, `mcp_server`, `a2a_agent`, `skill`, `ai_tool`, `llm`. DID method unification across the three specs landed on `main` for AIP and ATX on 2026-05-24, and ATP was already canonical at the unified method in v1.0.0-rc1.
 
 ### Composition with A2A-IDF (`#1496`)
 
@@ -52,8 +52,8 @@ None of these conflict with APS, CTEF, or Envoys. They are substrate at a differ
 
 ### Reference implementation
 
-- **AIM** ([`opena2a-org/agent-identity-management`](https://github.com/opena2a-org/agent-identity-management)) is the reference implementation of AIP and the credential issuer for ATX.
-- **OpenA2A Registry** ([`opena2a-org/opena2a-registry`](https://github.com/opena2a-org/opena2a-registry)) operates the CA infrastructure (issuance service, threshold signing, RFC 6962 transparency log, CRL service, federation).
+- **AIM** ([`opena2a-org/agent-identity-management`](https://github.com/opena2a-org/agent-identity-management)) is the reference implementation of AIP.
+- **OpenA2A Registry** ([`opena2a-org/opena2a-registry`](https://github.com/opena2a-org/opena2a-registry)) operates the CA infrastructure (issuance service, threshold signing, RFC 6962 transparency log, CRL service, federation) and issues ATX credentials in production today.
 
 ### Honest coverage scoping (the reference implementation is not all-shipped)
 
