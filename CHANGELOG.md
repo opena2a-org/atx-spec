@@ -8,6 +8,30 @@ identifier registered in `core.md` §14.
 
 ## [Unreleased]
 
+### Added
+
+- `errata/`: published ATX text is now corrected through numbered errata rather
+  than silent edits. An erratum is one file, `errata/ATX-E-NNNN.md`, whose
+  frontmatter carries `id`, `status`, `class`, `affectsDocument`, `affectsWire`,
+  `sections`, `oldText`, `newText`, `fixtures`, `filed` and `accepted` — the
+  published text and its replacement verbatim, so a reader can apply the
+  correction without judgement. Acceptance of an erratum is a document PATCH on
+  the version ladder. `errata/README.md` is generated from those files by
+  `scripts/gen_errata_index.py` and `core.md`'s header names it and the highest
+  incorporated erratum. No erratum has been filed yet; this is the mechanism.
+- `scripts/check_errata.py` + `scripts/test_errata.sh`, wired into
+  `.github/workflows/conformance-counts.yml` after the count check and against
+  the same atx-conformance checkout: an erratum whose class is not `editorial`
+  cannot be accepted while it names no conformance fixture, or names one the
+  suite does not contain — the corrected behaviour has to be observable, not
+  just written down. The guard also fails an accepted erratum missing from this
+  changelog, a stale index, a frontmatter key that is not in the contract, a
+  duplicate or misnamed id, and a `security` erratum still `proposed` under a
+  header that already claims it as incorporated. Per Binding Decision 10 it
+  additionally fails any implementation name or implementation status appearing
+  under `errata/`: the public text says what the specification requires, and the
+  conformance suite reports who passes.
+
 ### Changed
 
 - §12 and README conformance-suite counts corrected to the 20-fixture suite, and

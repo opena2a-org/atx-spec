@@ -41,3 +41,14 @@ jobs:
 
       - name: Stated counts match the shipped fixture set
         run: python3 scripts/check_conformance_counts.py --suite .suite
+
+      # Same shape as the count check above, and here for the same reason: an
+      # erratum whose class is not editorial has to name a fixture that exists
+      # in the suite, and the suite lives in another repository. The scratch
+      # trees the tests build cover the failing shapes; the run against this
+      # tree is the real one. Ungated on purpose -- an erratum that is not
+      # publishable is not a warning.
+      - name: Errata are well formed, indexed and backed by fixtures
+        run: |
+          python3 scripts/check_errata.py --suite .suite
+          bash scripts/test_errata.sh
