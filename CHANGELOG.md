@@ -10,6 +10,10 @@ identifier registered in `core.md` §14.
 
 ### Changed
 
+- §12 and README conformance-suite counts synced to the 21-fixture suite: atx-conformance
+  #22 added `v1_1-untrusted-chain-authority.json`, the MUST-REJECT fixture for the §1.3 step 4
+  key-eligibility sentence (#19), and both fixture descriptions here now name it.
+
 - §12 and README conformance-suite counts corrected to the 20-fixture suite, and
   their fixture descriptions extended to name the strict-parse family that was
   never documented here: duplicate object members rejected at any depth
