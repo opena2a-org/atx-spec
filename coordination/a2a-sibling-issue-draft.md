@@ -73,7 +73,7 @@ AIP-SPEC Appendix A.1 names this explicitly. The summary:
 | ATX §1.2 lifecycle (build-plugin issuance) | Plugin not yet shipped as code | Specified in ATX core §3.1; reference implementation pending. |
 | ATP §5 Transparency Log (RFC 6962) | Shipped (binary Merkle tree, signed tree heads, consistency proofs) | Endpoint serving live signed tree heads and consistency proofs is in the registry. |
 | ATP §6 Federation | Single-authority today | Federation routes and bilateral cosignature flow exist. Multi-authority operating consensus is the next federation milestone. |
-| Local offline verification | Go in the SDK layer; Go plus Python in the conformance suite | Standalone offline-verify package exists at the registry's `pkg/atcverify` (Go, full Ed25519 plus ML-DSA-65 hybrid). The `opena2a-standards/atx-conformance` suite ships an additional SDK-independent Python reference verifier (Ed25519 only; ML-DSA-65 verification out of scope for the Python stdlib stack) and a Go reference verifier with full hybrid coverage. TypeScript and Java SDKs do not yet ship a local-verify library. |
+| Local offline verification | Go in the SDK layer; Go plus Python in the conformance suite | Standalone offline-verify package exists at the registry's `pkg/atcverify` (Go, full Ed25519 plus ML-DSA-65 hybrid). The `opena2a-standards/atx-conformance` suite ships an additional SDK-independent Python reference verifier (full hybrid, ML-DSA-65 via `dilithium-py`) alongside a Go reference verifier with the same coverage. TypeScript and Java SDKs do not yet ship a local-verify library. |
 
 ### Where this set does not yet meet the (a)(b)(c) bar this Coordination Map applies
 

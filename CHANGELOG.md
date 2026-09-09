@@ -34,6 +34,16 @@ identifier registered in `core.md` §14.
 
 ### Changed
 
+- The stated conformance-suite counts and the reference-verifier capability claims follow the
+  suite: it ships **22** fixtures, not 21, and both reference verifiers now verify both declared
+  signature suites. atx-conformance added `fixtures/v1_1-hybrid-mldsa-tampered.json` (a hybrid
+  credential with the Ed25519 entry intact and one bit of the ML-DSA-65 signature flipped, which
+  the §13 family signature gate rejects) and implemented ML-DSA-65 verification in the Python
+  reference verifier via `dilithium-py` (FIPS 204). README.md and §12 carried "21 fixtures",
+  "21 of 21 PASS", "Python (Ed25519 only; post-quantum verification out of scope for the Python
+  stdlib stack)" and "all but the two hybrid fixtures"; all four are corrected, and the new
+  fixture joins both fixture enumerations. The count half is what `conformance counts` enforces;
+  the verifier-capability half is not machine-checked here, which is why it drifted.
 - §13 Cryptographic agility adopts the family signature gate of AAP §9.4: every declared
   signature entry MUST verify, a verifier MUST NOT accept a credential on a subset of its
   declared signatures, and a verifier that does not implement a declared suite MUST reject
@@ -43,7 +53,7 @@ identifier registered in `core.md` §14.
   Python reference verifier, which records an ML-DSA-65 entry as present without verifying
   it, accepts a credential whose ML-DSA-65 signature does not verify. A MUST-REJECT hybrid
   fixture and ML-DSA-65 verification in the Python reference are a separate atx-conformance
-  change and are not part of this one. §12 discloses that all but the two hybrid fixtures
+  change and are not part of this one. §12 discloses that all but the three hybrid fixtures
   carry Ed25519 signatures only.
 - §1.3 step 2 evaluates `expiresAt` within the family clock-skew bound of ATP §10.2 (cited, not
   restated), which never extends the credential TTL or the revocation cache window.
