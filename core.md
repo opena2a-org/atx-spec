@@ -60,6 +60,7 @@ The ATX travels with the agent. When agent A calls agent B, A presents its ATX i
   "version":          "2.1.4",
   "contentHash":      "3f8a1c5d9e2b7f4a6c0d8e1b5a9f3c7e2d6b0a4f8c1e5d9b3a7f0c4e8d2b6a1f",
   "buildAttestation": "https://slsa.dev/provenance/v1#acme-corp/billing-agent",
+  "transparencyLogIndex": 1847293,
   "capabilities":     ["db:read", "api:call"],
   "declaredPurpose": {
     "vocabVersion": "1",
@@ -104,9 +105,9 @@ The ATX travels with the agent. When agent A calls agent B, A presents its ATX i
 }
 ```
 
-The illustration is wire-shape-accurate but its hash and signature values are placeholders — it does not verify. The machine-readable definition of this shape is [`schemas/atx-credential-v1.1.schema.json`](./schemas/atx-credential-v1.1.schema.json); the atx-conformance fixtures are the byte ground truth.
+The illustration is wire-shape-accurate but its hash, signature and log-index values are placeholders — it does not verify. The machine-readable definition of this shape is [`schemas/atx-credential-v1.1.schema.json`](./schemas/atx-credential-v1.1.schema.json); the atx-conformance fixtures are the byte ground truth.
 
-Every field is mandatory unless explicitly marked optional in the ATP spec or in this document. `transparencyLogIndex` is optional and deprecated: it has never carried a live log position and is outside both signing forms (§1.3a.1, §1.3a.2). Issuers SHOULD omit it, and verifiers MUST NOT treat its value as evidence of log inclusion; inclusion is established only by the log's own proofs (§6). The signature block carries at minimum one Ed25519 signature and one ML-DSA-65 signature. Quantum resistance is not deferred. It ships on day one.
+Every field is mandatory unless explicitly marked optional in the ATP spec or in this document. `transparencyLogIndex` is optional: it is the index the issuer's transparency log assigned to this credential's issuance entry (§6), set after signing and outside both signing forms (§1.3a.1, §1.3a.2). An issuer MUST NOT emit it with any value other than the one the log assigned to this credential's entry, and an issuer that recorded no inclusion omits it. Verifiers MUST NOT treat its value as evidence of log inclusion; inclusion is established only by the log's own proofs (§6), for which a present index is the lookup key (ATP verification step 6). The signature block carries at minimum one Ed25519 signature and one ML-DSA-65 signature. Quantum resistance is not deferred. It ships on day one.
 
 The version field is named `atcVersion` on the wire (earlier revisions of this document illustrated it under the alias `atxVersion`). Its value selects the canonical form the signatures cover: see §1.3a. `"1.0"` is the legacy eleven-field form; `"1.1"` signs the JCS (RFC 8785) canonicalization of a projected to-be-signed object, which brings `capabilities`, `scanSummary`, `issuerChain`, and `publisher` under the signature. `trustScore` rides the wire as a 0-100 JSON number; the v1.1 to-be-signed projection string-encodes it (§1.3a.2 rule 3). The issuance envelope fields `id`, `revoked`, and `createdAt` (plus `revokedAt`/`revocationReason` once revoked) accompany every issued credential and are excluded from the signed bytes (§1.3a.2).
 
@@ -196,8 +197,7 @@ behavioralProfile, scanSummary, trustScore, trustLevel, issuedAt, expiresAt,
 issuerDid, issuerChain
 ```
 
-Excluded, and MUST NOT appear in the TBS: `id`; `transparencyLogIndex` (a dead
-field, never populated); `signatures` (the envelope being produced); `revoked`,
+Excluded, and MUST NOT appear in the TBS: `id`; `transparencyLogIndex` (unsigned inclusion metadata, assigned by the log and set after signing; §1.1); `signatures` (the envelope being produced); `revoked`,
 `revokedAt`, `revocationReason` (mutated after issuance via the CRL and the
 database, so they cannot be signed at issuance); and `createdAt`.
 

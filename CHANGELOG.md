@@ -23,11 +23,13 @@ identifier registered in `core.md` §14.
   carry Ed25519 signatures only.
 - §1.3 step 2 evaluates `expiresAt` within the family clock-skew bound of ATP §10.2 (cited, not
   restated), which never extends the credential TTL or the revocation cache window.
-- `transparencyLogIndex` is optional and deprecated: removed from `required` in
-  `schemas/atx-credential-v1.1.schema.json` and marked `deprecated`; §1.1 says issuers SHOULD
-  omit it and verifiers MUST NOT read it as evidence of log inclusion; the §1.1 example no longer
-  carries a fake live index. The field is outside both signing forms, so no wire shape or
-  verdict changes; the conformance suite re-pins its vendored schema copy.
+- `transparencyLogIndex` is optional: removed from `required` in
+  `schemas/atx-credential-v1.1.schema.json`. It is the log-assigned index of the credential's
+  issuance entry, set after signing and outside both signing forms, so no verdict changes; §1.1
+  now binds issuers to emit only the log-assigned value (omitting it when no inclusion was
+  recorded) and verifiers MUST NOT read it as evidence of inclusion. The schema and §1.3a.2 text
+  calling it a dead field is corrected; the conformance suite's vendored schema copy moves in its
+  own atx-conformance change.
 - §1.5.4 example capability `secrets:*` becomes `secrets:read`: AIP §4.1 expresses
   capabilities as `namespace:action` strings and lists no wildcard action; AIP #25 adds the
   grammar that states this and adds the `secrets` namespace to the AIP §4.2 registry.
