@@ -70,6 +70,11 @@ identifier registered in `core.md` §14.
 - `schemas/atx-credential-v1.1.schema.json`: `declaredPurpose` now also
   accepts the empty object (wire-tolerated, treated as absent), matching
   rule 5.
+- core.md §2 item 5 previously promised signed CRL endpoints, delta CRLs and a push
+  notification format; it now states what ATP-SPEC v1.0.0-rc1 §8.1 actually defines — the
+  since-timestamp revocation response, its schema and the client refresh cadence — with the
+  §8.1 revocation response body left unsigned in ATP 1.0 and a signed revocation list named
+  as ATP 1.1 work.
 
 ### Added
 
