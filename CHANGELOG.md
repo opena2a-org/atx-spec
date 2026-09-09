@@ -34,6 +34,14 @@ identifier registered in `core.md` §14.
 
 ### Changed
 
+- The stated conformance-suite count follows the suite to **23** fixtures. atx-conformance added
+  `fixtures/v1_1-no-transparency-log-index.json`, a MUST-PASS credential omitting the optional
+  `transparencyLogIndex`. Every other fixture carries the field, so until now nothing in the suite
+  exercised its optionality and a verifier that still required it passed the suite unchanged. The
+  field is assigned by the log after signing and sits outside both signing forms, so the
+  credential's canonical bytes and its signature are identical to the v1.1 baseline's. Section 12's
+  fixture enumeration names it; no normative text changes.
+
 - The stated conformance-suite counts and the reference-verifier capability claims follow the
   suite: it ships **22** fixtures, not 21, and both reference verifiers now verify both declared
   signature suites. atx-conformance added `fixtures/v1_1-hybrid-mldsa-tampered.json` (a hybrid
