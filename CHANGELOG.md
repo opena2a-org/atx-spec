@@ -10,6 +10,30 @@ identifier registered in `core.md` §14.
 
 ### Changed
 
+- §13 Cryptographic agility adopts the family signature gate of AAP §9.4: every declared
+  signature entry MUST verify, a verifier MUST NOT accept a credential on a subset of its
+  declared signatures, and a verifier that does not implement a declared suite MUST reject
+  rather than accept on the suites it does implement (AAP §8.2). §1.3 step 5 says the same for
+  the ML-DSA-65 entry. The previous sentence permitted classical-only acceptance with a
+  labeling rule; the reference suite's Python verifier accepts a forged ML-DSA-65 signature under
+  it, and the suite gains a MUST-REJECT hybrid fixture and a verifying Python reference under a
+  separate change. §12 discloses that all but the two hybrid fixtures carry Ed25519 signatures
+  only.
+- §1.3 step 2 evaluates `expiresAt` within the family clock-skew bound of ATP §10.2 (cited, not
+  restated), which never extends the credential TTL or the revocation cache window.
+- `transparencyLogIndex` is optional and deprecated: removed from `required` in
+  `schemas/atx-credential-v1.1.schema.json` and marked `deprecated`; §1.1 says issuers SHOULD
+  omit it and verifiers MUST NOT read it as evidence of log inclusion; the §1.1 example no longer
+  carries a fake live index. The field is outside both signing forms, so no wire shape or
+  verdict changes; the conformance suite re-pins its vendored schema copy.
+- §1.5.4 example capability `secrets:*` becomes `secrets:read`: the AIP §4.1 grammar has no
+  wildcard action (the `secrets` namespace itself is registered by AIP #25).
+- §12 Coverage self-attestation cites §3.3 and §6.4 rather than whole sections §3 and §6,
+  matching the gap list in the same paragraph.
+- Three family-harness definition anchors added under §1.3, §1.3a.2 and §12
+  (`opena2a-definition`: `atx-verification-steps`, `atx-tbs-exclusions`,
+  `atx-conformance-coverage`); they change no text.
+
 - §12 and README conformance-suite counts synced to the 21-fixture suite: atx-conformance
   #22 added `v1_1-untrusted-chain-authority.json`, the MUST-REJECT fixture for the §1.3 step 4
   key-eligibility sentence (#19), and both fixture descriptions here now name it.
