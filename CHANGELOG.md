@@ -41,6 +41,13 @@ identifier registered in `core.md` §14.
   field is assigned by the log after signing and sits outside both signing forms, so the
   credential's canonical bytes and its signature are identical to the v1.1 baseline's. Section 12's
   fixture enumeration names it; no normative text changes.
+- Section 14's capability-token row cites its home instead of restating it: the grammar is
+  `namespace:action` per AIP section 4.1, and namespaces are reserved in AIP section 4.2. The row
+  previously used a different second term for the grammar and named a product repository as the
+  registry's home rather than the specification that governs it. No governed set changes; this
+  corrects where the set is defined and what it is called. (The superseded wording is deliberately
+  not quoted here: the family drift check counts those literals across every `*.md` in this
+  repository, so restating them in a changelog would keep the check red.)
 
 - The stated conformance-suite counts and the reference-verifier capability claims follow the
   suite: it ships **22** fixtures, not 21, and both reference verifiers now verify both declared
