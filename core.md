@@ -5,6 +5,7 @@
 **Document version:** 1.1.0-final (July 2026; first published as "Version 1.0", May 2026)
 **Credential format status:** ATX 1.1 is the current, normative wire format (§1.3a.2) and is what production issuance emits; ATX 1.0 is frozen legacy (§1.3a.1), accepted per the transition rule in §1.3a.5.
 **Protocol status:** the ATP wire protocol (§2) is normatively specified in [ATP-SPEC v1.0.0-rc1](https://github.com/opena2a-standards/agent-trust-protocol); this document defines the architecture it implements. Identity (AIP) and authorization (AAP) layers beneath this document carry their own, earlier maturity levels — a claim in this document never upgrades theirs.
+**Errata:** errata/README.md, incorporated through none
 
 Defines the Agent Trust eXtension credential format, the Agent Trust Protocol that issues and verifies it, and the architectural commitments that make the system survive at planetary scale.
 
