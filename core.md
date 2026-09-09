@@ -106,9 +106,9 @@ The ATX travels with the agent. When agent A calls agent B, A presents its ATX i
 }
 ```
 
-The illustration is wire-shape-accurate but its hash and signature values are placeholders — it does not verify. The machine-readable definition of this shape is [`schemas/atx-credential-v1.1.schema.json`](./schemas/atx-credential-v1.1.schema.json); the atx-conformance fixtures are the byte ground truth.
+The illustration is wire-shape-accurate but its hash, signature and log-index values are placeholders — it does not verify. The machine-readable definition of this shape is [`schemas/atx-credential-v1.1.schema.json`](./schemas/atx-credential-v1.1.schema.json); the atx-conformance fixtures are the byte ground truth.
 
-Every field is mandatory unless explicitly marked optional in the ATP spec. The signature block carries at minimum one Ed25519 signature and one ML-DSA-65 signature. Quantum resistance is not deferred. It ships on day one.
+Every field is mandatory unless explicitly marked optional in the ATP spec or in this document. `transparencyLogIndex` is optional: it is the index the issuer's transparency log assigned to this credential's issuance entry (§6), set after signing and outside both signing forms (§1.3a.1, §1.3a.2). An issuer MUST NOT emit it with any value other than the one the log assigned to this credential's entry, and an issuer that recorded no inclusion omits it. Verifiers MUST NOT treat its value as evidence of log inclusion; inclusion is established only by the log's own proofs (§6), for which a present index is the lookup key (ATP verification step 6). The signature block carries at minimum one Ed25519 signature and one ML-DSA-65 signature. Quantum resistance is not deferred. It ships on day one.
 
 The version field is named `atcVersion` on the wire (earlier revisions of this document illustrated it under the alias `atxVersion`). Its value selects the canonical form the signatures cover: see §1.3a. `"1.0"` is the legacy eleven-field form; `"1.1"` signs the JCS (RFC 8785) canonicalization of a projected to-be-signed object, which brings `capabilities`, `scanSummary`, `issuerChain`, and `publisher` under the signature. `trustScore` rides the wire as a 0-100 JSON number; the v1.1 to-be-signed projection string-encodes it (§1.3a.2 rule 3). The issuance envelope fields `id`, `revoked`, and `createdAt` (plus `revokedAt`/`revocationReason` once revoked) accompany every issued credential and are excluded from the signed bytes (§1.3a.2).
 
@@ -126,14 +126,16 @@ The version field is named `atcVersion` on the wire (earlier revisions of this d
 | Revocation | Compromise detected | Issuing node publishes to CRL. Federated push to all nodes within 60 seconds. Local verifiers refresh within 5 minutes. |
 
 ### 1.3 Local verification algorithm
+<!-- opena2a-definition: atx-verification-steps -->
 
 Any party verifying an ATX runs this sequence locally. Steps 1 through 5 require zero network calls. Step 6 uses a locally cached revocation list refreshed every 5 minutes.
 
 1. Parse ATX. Validate schema version is supported.
-2. Check expiresAt is in the future. Expired ATX rejects immediately.
+2. Check `expiresAt` is in the future, evaluated within the family clock-skew bound of ATP §10.2, which never extends the credential TTL of §1.2 or the revocation cache window of §3.3. Expired ATX rejects immediately.
 3. Resolve issuerDid to public key using locally cached DID document. TTL is one hour. Cache miss triggers a single fetch.
 4. Verify the Ed25519 signature against the cached public key. Sub millisecond on any modern CPU.
-5. If ML-DSA-65 signature is present, verify it too. Adds three to five milliseconds.
+   - Key eligibility. The key a signature is verified against MUST have been resolved, as in step 3, for an authority the verifier trusts for this credential: the authority named by `issuerDid`, or, under `atcVersion` 1.1 only, an authority that the signed `issuerChain` names and that is a trusted issuer under the verifier's federation trust list (§7). A chain DID that is not a trusted issuer contributes no eligible key: the chain is signed by the very key whose eligibility is in question, so it cannot vouch for that key (§13, Delegation and chain abuse). Under `atcVersion` 1.0 `issuerChain` is unsigned (§1.3a.1) and contributes no eligible key. A signature that verifies only against some other key the verifier holds is a signature failure (`SIGNATURE_INVALID`), not an issuer failure.
+5. Verify every remaining declared signature, the ML-DSA-65 signature included, under the family signature gate (§13, Cryptographic agility; AAP §9.4): a declared signature that does not verify, or whose suite this verifier does not implement, is a signature failure. ML-DSA-65 adds three to five milliseconds.
 6. Check agentId against locally cached CRL. If listed, reject. If cache is stale beyond 5 minutes, refresh asynchronously but allow this request using the cached version.
 7. Count distinct signer authorities. If trust level 3 or higher is required, the verifier MUST reject the credential unless at least two distinct authorities have each produced a signature that this verifier has itself verified over the credential's canonical signed bytes (the form selected in step 1).
    - The authority behind a signature is the DID its `keyId` names: the `keyId` up to the first `#`, or the whole value if it contains none. A signature counts only after the verifier has resolved that DID as in step 3, confirmed the verifying key is published in the resulting DID document, and confirmed the authority is one it accepts under its federation trust list (§7).
@@ -176,6 +178,7 @@ any of those fields and the signature still verifies. Consumers MUST treat those
 fields as unauthenticated when `atcVersion` is `1.0` (see §1.3a.4).
 
 #### 1.3a.2 JCS form (`atcVersion` = "1.1")
+<!-- opena2a-definition: atx-tbs-exclusions -->
 
 ATX v1.1 signs `JCS(TBS)`: the [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785)
 JSON Canonicalization of a to-be-signed (TBS) object projected from the
@@ -195,8 +198,7 @@ behavioralProfile, scanSummary, trustScore, trustLevel, issuedAt, expiresAt,
 issuerDid, issuerChain
 ```
 
-Excluded, and MUST NOT appear in the TBS: `id`; `transparencyLogIndex` (a dead
-field, never populated); `signatures` (the envelope being produced); `revoked`,
+Excluded, and MUST NOT appear in the TBS: `id`; `transparencyLogIndex` (unsigned inclusion metadata, assigned by the log and set after signing; §1.1); `signatures` (the envelope being produced); `revoked`,
 `revokedAt`, `revocationReason` (mutated after issuance via the CRL and the
 database, so they cannot be signed at issuance); and `createdAt`.
 
@@ -362,7 +364,7 @@ no wildcard.
 Purpose breadth is computed from `capabilityJustification`, not from how
 taskScope tokens are named (which an adversary could craft to sound narrow). The
 measure is the count of distinct capability *namespaces* across all
-justification entries; a "narrow" declaration that justifies `secrets:*`,
+justification entries; a "narrow" declaration that justifies `secrets:read`,
 `network:connect`, and `system:exec` scores broad regardless of its token names.
 A computed breadth above the category's class raises the floor; it never lowers
 it. An over-broad declaration is therefore a visible, scoreable downgrade rather
@@ -393,7 +395,7 @@ ATP defines five things:
 2. **The DID method `did:opena2a`.** How publishers, agents, and authorities are named. How keys are bound to identities. How key rotation works without breaking existing credentials. Type prefixes registered: `registry`, `authority`, `publisher`, `agent`, `mcp_server`, `ai_tool`, `llm`, `skill` (`a2a_agent` is a deprecated legacy alias of `agent`, not a registered type). Shared with AIP (Agent Identity Protocol) and ATP-SPEC v1.0.0-rc1.
 3. **The transparency log format.** RFC 6962 binary Merkle tree. Signed Tree Head schema. Inclusion and consistency proof formats.
 4. **The federation protocol.** How nodes register with each other, exchange public keys, cosign credentials, propagate revocations, and maintain trust lists.
-5. **The revocation list format.** Delta CRLs, signed CRL endpoints, push notification format, cache semantics.
+5. **The revocation list format.** ATP-SPEC v1.0.0-rc1 §8.1 defines the since-timestamp revocation response, its schema, and the client refresh cadence. That response body is **not signed** in ATP 1.0 — authenticity rides on the transport and on each entry's transparency-log index — and §8.1 records signing it as an open question for a future revision; a signed revocation list, delta CRLs and a push-notification format are ATP 1.1 work, not ATP 1.0 guarantees.
 
 ATP is the standards play. ATX is the wedge. We push ATP into A2A spec as the trust binding A2A is missing today (PR 1496 already in flight). We push ATP into IETF as a Working Group draft. We push the transparency log conformance criteria into the same model the WebPKI uses for CA acceptance.
 
@@ -654,18 +656,19 @@ These six commitments are how the system survives at scale, how governments are 
 ---
 
 ## 12. Conformance
+<!-- opena2a-definition: atx-conformance-coverage -->
 
 Three conformance targets exist. An implementation claims conformance for one or more of them; the claims are independent.
 
 **Credential (an ATX instance).** A conforming ATX carries every mandatory field of §1.1, selects exactly one canonical signing form by its version field (§1.3a), and its signatures verify over the bytes that form produces. A v1.1 credential MUST satisfy the determinism rules of §1.3a.2.
 
-**Issuer.** A conforming issuer emits only conforming credentials, signs `JCS(TBS)` bytes that are byte-identical to what the conformance vectors pin (§1.3a.3), logs every issuance and revocation to the transparency log before it takes effect (§11 commitment 3), and never requires a verifier to contact it on the verification path (§9). A conforming issuer MUST NOT assert `trustLevel` 3 or higher on a credential that does not carry signatures from at least two distinct authorities as §1.3 step 7 counts them, and MUST NOT assert `trustLevel` 4 without the root cosignature §7 rule 4 requires. This binds issuance from the point an issuer claims conformance to it; it is not retroactive and it does not reclassify credentials already issued. The conformance suite's fixtures are not conforming issuer output under this rule and are not a model of issuance: they assert `trustLevel` 4 while carrying signatures from a single authority (see Coverage below), because they exist to pin signing bytes and verdicts rather than issuance policy.
+**Issuer.** A conforming issuer emits only conforming credentials, signs `JCS(TBS)` bytes that are byte-identical to what the conformance vectors pin (§1.3a.3), logs every issuance and revocation to the transparency log before it takes effect (§11 commitment 3), and never requires a verifier to contact it on the verification path (§9). A conforming issuer MUST NOT assert `trustLevel` 3 or higher on a credential that does not carry signatures from at least two distinct authorities as §1.3 step 7 counts them, and MUST NOT assert `trustLevel` 4 without the root cosignature §7 rule 4 requires. This binds issuance from the point an issuer claims conformance to it; it is not retroactive and it does not reclassify credentials already issued. The conformance suite's fixtures are not conforming issuer output under this rule and are not a model of issuance: they assert `trustLevel` 4 while carrying signatures from a single authority, and all but the two hybrid fixtures carry Ed25519 signatures only (see Coverage below), because they exist to pin signing bytes and verdicts rather than issuance policy.
 
 **Verifier.** A conforming verifier implements the local verification algorithm of §1.3, dispatching on the credential's version field, and rejects on the failure of any step. It MUST treat the §1.3a.1 unsigned fields as unauthenticated under `atcVersion` `1.0` (§1.3a.4), and it MUST NOT add a network dependency on the issuing node to the acceptance path.
 
-**Conformance suite.** The executable definition of these claims is the byte-pinned fixture set and SDK-independent reference verifiers at [`opena2a-standards/atx-conformance`](https://github.com/opena2a-standards/atx-conformance): 20 fixtures (baseline, hybrid, threshold cosignature, revocation, expiry, issuer binding, tamper rejection, malformed schema, and the `v1_1-*` family covering JCS signing, signed-field integrity, `declaredPurpose`, the rule-5 degenerate inputs — whitespace-empty object accepted as absent, injected non-object values rejected — and strict credential parse: duplicate object members rejected at any depth per RFC 8259 §4, and case-variant members that a last-wins JSON decoder would collapse rejected as `PARSE_ERROR`), each pinned by SHA-256 in its `MANIFEST.sha256`, plus the `jcs-vectors` cross-language byte-agreement gate. An implementation claiming issuer or verifier conformance MUST produce the pinned verdict on every fixture and, for v1.1 issuance, MUST reproduce every `jcs-vectors` `expected.canonicalHex` byte-for-byte.
+**Conformance suite.** The executable definition of these claims is the byte-pinned fixture set and SDK-independent reference verifiers at [`opena2a-standards/atx-conformance`](https://github.com/opena2a-standards/atx-conformance): 21 fixtures (baseline, hybrid, threshold cosignature, revocation, expiry, issuer binding, tamper rejection, malformed schema, and the `v1_1-*` family covering JCS signing, signed-field integrity, the untrusted chain authority of §1.3 step 4 that contributes no eligible key even when named in the signed `issuerChain`, `declaredPurpose`, the rule-5 degenerate inputs — whitespace-empty object accepted as absent, injected non-object values rejected — and strict credential parse: duplicate object members rejected at any depth per RFC 8259 §4, and case-variant members that a last-wins JSON decoder would collapse rejected as `PARSE_ERROR`), each pinned by SHA-256 in its `MANIFEST.sha256`, plus the `jcs-vectors` cross-language byte-agreement gate. An implementation claiming issuer or verifier conformance MUST produce the pinned verdict on every fixture and, for v1.1 issuance, MUST reproduce every `jcs-vectors` `expected.canonicalHex` byte-for-byte.
 
-**Coverage.** The suite is the executable definition of the requirements it has fixtures for, and no more. It is not a complete test of this specification, and a requirement's absence from the suite is not evidence that an implementation satisfies it. Requirements stated normatively in this document that no fixture exercises include the distinct-signer-authority count of §1.3 step 7, the cosignature requirements of §7 (federation cosigning, and the root cosignature at trust level 4), revocation propagation timing (§3.3), and transparency-log monitor behavior (§6.4). No fixture carries signatures from more than one distinct authority, and the fixture format has no field for the required trust level that step 7's condition reads, so a verifier that omits step 7 entirely passes the suite. An implementation MUST self-attest these requirements against §1.3 step 7, §3, §6, and §7 until fixtures exist for them. The profile in `conformance.json` does not identify which requirement a given fixture exercises: every entry in it cites the same specification sections. Where this section and the suite's `notCovered` list disagree, both are incomplete; the requirement text in this document governs.
+**Coverage.** The suite is the executable definition of the requirements it has fixtures for, and no more. It is not a complete test of this specification, and a requirement's absence from the suite is not evidence that an implementation satisfies it. Requirements stated normatively in this document that no fixture exercises include the distinct-signer-authority count of §1.3 step 7, the cosignature requirements of §7 (federation cosigning, and the root cosignature at trust level 4), revocation propagation timing (§3.3), and transparency-log monitor behavior (§6.4). No fixture carries signatures from more than one distinct authority, and the fixture format has no field for the required trust level that step 7's condition reads, so a verifier that omits step 7 entirely passes the suite. An implementation MUST self-attest these requirements against §1.3 step 7, §3.3, §6.4, and §7 until fixtures exist for them. The profile in `conformance.json` does not identify which requirement a given fixture exercises: every entry in it cites the same specification sections. Where this section and the suite's `notCovered` list disagree, both are incomplete; the requirement text in this document governs.
 
 ---
 
@@ -689,7 +692,7 @@ Attack techniques are cited by agent-threat-matrix ID ([threats.opena2a.org](htt
 
 **Downgrade resistance.** `atcVersion` sits inside the v1.1 TBS, so stripping a v1.1 credential to the legacy form fails closed (§1.3a.5). Verifiers MUST NOT accept a credential whose version field selects a form its signatures do not verify under.
 
-**Cryptographic agility.** Every credential carries Ed25519 and ML-DSA-65 signatures (§1.1); verifiers verify all signatures present for the suites they support. A verifier that ignores the ML-DSA-65 signature accepts classical-only assurance and MUST NOT claim post-quantum verification.
+**Cryptographic agility.** Every credential carries Ed25519 and ML-DSA-65 signatures (§1.1); signature acceptance follows the family signature gate of AAP §9.4: every signature entry the credential declares MUST verify, a verifier MUST NOT accept a credential on a subset of its declared signatures, and a credential that declares an ML-DSA-65 entry MUST also carry a verifying Ed25519 entry. A verifier that does not implement a declared suite MUST reject the credential rather than accept it on the suites it does implement (AAP §8.2); the rejection is a signature failure (`SIGNATURE_INVALID`). A verifier that verifies only the Ed25519 entry has not performed post-quantum verification and MUST NOT claim it.
 
 ---
 

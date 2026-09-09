@@ -34,6 +34,39 @@ identifier registered in `core.md` §14.
 
 ### Changed
 
+- §13 Cryptographic agility adopts the family signature gate of AAP §9.4: every declared
+  signature entry MUST verify, a verifier MUST NOT accept a credential on a subset of its
+  declared signatures, and a verifier that does not implement a declared suite MUST reject
+  rather than accept on the suites it does implement (AAP §8.2). §1.3 step 5 applies the same
+  gate to every remaining declared signature, the ML-DSA-65 entry included. The previous
+  sentence permitted classical-only acceptance with a labeling rule; under it the suite's
+  Python reference verifier, which records an ML-DSA-65 entry as present without verifying
+  it, accepts a credential whose ML-DSA-65 signature does not verify. A MUST-REJECT hybrid
+  fixture and ML-DSA-65 verification in the Python reference are a separate atx-conformance
+  change and are not part of this one. §12 discloses that all but the two hybrid fixtures
+  carry Ed25519 signatures only.
+- §1.3 step 2 evaluates `expiresAt` within the family clock-skew bound of ATP §10.2 (cited, not
+  restated), which never extends the credential TTL or the revocation cache window.
+- `transparencyLogIndex` is optional: removed from `required` in
+  `schemas/atx-credential-v1.1.schema.json`. It is the log-assigned index of the credential's
+  issuance entry, set after signing and outside both signing forms, so no verdict changes; §1.1
+  now binds issuers to emit only the log-assigned value (omitting it when no inclusion was
+  recorded) and verifiers MUST NOT read it as evidence of inclusion. The schema and §1.3a.2 text
+  calling it a dead field is corrected; the conformance suite's vendored schema copy moves in its
+  own atx-conformance change.
+- §1.5.4 example capability `secrets:*` becomes `secrets:read`: AIP §4.1 expresses
+  capabilities as `namespace:action` strings and lists no wildcard action; AIP #25 adds the
+  grammar that states this and adds the `secrets` namespace to the AIP §4.2 registry.
+- §12 Coverage self-attestation cites §3.3 and §6.4 rather than whole sections §3 and §6,
+  matching the gap list in the same paragraph.
+- Three HTML-comment anchors for the OpenA2A spec-family drift checks
+  (opena2a-standards/.github#5) added under §1.3, §1.3a.2 and §12 (`opena2a-definition`:
+  `atx-verification-steps`, `atx-tbs-exclusions`, `atx-conformance-coverage`); they render
+  nothing and change no text.
+- §12 and README conformance-suite counts synced to the 21-fixture suite: atx-conformance
+  #22 added `v1_1-untrusted-chain-authority.json`, the MUST-REJECT fixture for the §1.3 step 4
+  key-eligibility sentence (#19), and both fixture descriptions here now name it.
+
 - §12 and README conformance-suite counts corrected to the 20-fixture suite, and
   their fixture descriptions extended to name the strict-parse family that was
   never documented here: duplicate object members rejected at any depth
@@ -61,6 +94,11 @@ identifier registered in `core.md` §14.
 - `schemas/atx-credential-v1.1.schema.json`: `declaredPurpose` now also
   accepts the empty object (wire-tolerated, treated as absent), matching
   rule 5.
+- core.md §2 item 5 previously promised signed CRL endpoints, delta CRLs and a push
+  notification format; it now states what ATP-SPEC v1.0.0-rc1 §8.1 actually defines — the
+  since-timestamp revocation response, its schema and the client refresh cadence — with the
+  §8.1 revocation response body left unsigned in ATP 1.0 and a signed revocation list named
+  as ATP 1.1 work.
 
 ### Added
 
